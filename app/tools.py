@@ -40,7 +40,8 @@ def run_tool(tool_name, command, output_file=None, timeout=300):
             stdout=subprocess.PIPE if output_file else None,
             stderr=subprocess.PIPE,
             text=True,
-            shell=True
+            shell=True,
+            env=os.environ.copy()  # Pass current environment variables to the subprocess
         )
 
         # Wait for the process to complete with timeout
@@ -93,7 +94,20 @@ def run_assetfinder(domain, output_file):
 
 def run_chaos(domain, output_file):
     """Run Chaos for subdomain enumeration."""
-    command = f"chaos -d {domain} -silent"
+    # Get API key from environment variable
+    api_key = os.environ.get('PDCP_API_KEY')
+    if not api_key:
+        print("Warning: PDCP_API_KEY environment variable not set. Chaos will not work properly.")
+        if output_file:
+            with open(output_file, 'w') as f:
+                f.write(f"# Chaos failed: PDCP_API_KEY not specified\n")
+        return "Chaos failed: PDCP_API_KEY not specified"
+
+    # Set the API key as an environment variable for the command
+    os.environ['PDCP_API_KEY'] = api_key
+
+    # Run chaos with the API key
+    command = f"chaos -d {domain} -silent -key {api_key}"
     return run_tool("Chaos", command, output_file)
 
 def run_sublist3r(domain, output_file):

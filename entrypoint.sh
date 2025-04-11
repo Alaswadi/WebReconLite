@@ -32,6 +32,13 @@ else
     exit 1
 fi
 
+# Check for API keys
+if [ -n "$PDCP_API_KEY" ]; then
+    echo "PDCP_API_KEY is set. Chaos should work properly."
+else
+    echo "WARNING: PDCP_API_KEY is not set. Chaos will not work properly."
+fi
+
 # Check tool availability
 echo "Checking tool availability:"
 /usr/local/bin/check-tools.sh

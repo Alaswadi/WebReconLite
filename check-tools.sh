@@ -24,7 +24,23 @@ check_tool() {
 # Check each tool
 check_tool subfinder
 check_tool assetfinder
-check_tool chaos
+
+# Special check for chaos with API key
+if [ -n "$PDCP_API_KEY" ]; then
+  check_tool chaos
+  if [ $? -eq 0 ]; then
+    echo "Testing chaos with API key..."
+    chaos -key "$PDCP_API_KEY" -d example.com -count 1 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      echo "  Chaos API key is working properly."
+    else
+      echo "  Chaos API key test failed. The key might be invalid."
+    fi
+  fi
+else
+  echo "chaos: ❌ Not configured (PDCP_API_KEY not set)"
+fi
+
 check_tool httpx
 check_tool gau
 check_tool sublist3r

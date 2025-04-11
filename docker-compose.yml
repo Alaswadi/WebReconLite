@@ -17,6 +17,7 @@ services:
       - FLASK_APP=app.py
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+      - PDCP_API_KEY=${PDCP_API_KEY}
     restart: unless-stopped
     networks:
       - webreconlite-network

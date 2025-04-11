@@ -90,8 +90,12 @@ EXPOSE 8001
 COPY check-tools.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/check-tools.sh
 
+# Copy and set up the entrypoint script
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Run the healthcheck on startup
 RUN /usr/local/bin/check-tools.sh
 
-# Run the application with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8001", "--workers", "4", "--timeout", "120", "app:app"]
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

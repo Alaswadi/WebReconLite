@@ -1,36 +1,5 @@
 # Use a multi-stage build approach
-# Stage 1: Download pre-built binaries for tools
-FROM alpine:latest AS tools-downloader
-
-# Install dependencies
-RUN apk add --no-cache curl unzip
-
-# Create directory for tools
-WORKDIR /tools
-
-# Download subfinder
-RUN echo "Downloading subfinder..." && \
-    curl -L -o subfinder.zip https://github.com/projectdiscovery/subfinder/releases/download/v2.6.3/subfinder_2.6.3_linux_amd64.zip && \
-    unzip subfinder.zip && \
-    chmod +x subfinder && \
-    rm subfinder.zip
-
-# Download httpx
-RUN echo "Downloading httpx..." && \
-    curl -L -o httpx.zip https://github.com/projectdiscovery/httpx/releases/download/v1.3.7/httpx_1.3.7_linux_amd64.zip && \
-    unzip httpx.zip && \
-    chmod +x httpx && \
-    rm httpx.zip
-
-# Download chaos
-RUN echo "Downloading chaos..." && \
-    curl -L -o chaos.zip https://github.com/projectdiscovery/chaos-client/releases/download/v0.5.2/chaos-client_0.5.2_linux_amd64.zip && \
-    unzip chaos.zip && \
-    chmod +x chaos-client && \
-    mv chaos-client chaos && \
-    rm chaos.zip
-
-# Stage 2: Build the Go tools (for tools that don't have pre-built binaries)
+# Stage 1: Build the Go tools
 FROM golang:1.19 AS go-builder
 
 # Set up Go environment
@@ -64,18 +33,40 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-dev \
     build-essential \
+    golang \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip
 RUN pip install --upgrade pip
 
-# Create directories for binaries
-RUN mkdir -p /usr/local/bin
+# Set up Go environment
+ENV GOPATH /root/go
+ENV PATH $PATH:/root/go/bin
 
-# Copy pre-built binaries from the tools-downloader stage
-COPY --from=tools-downloader /tools/subfinder /usr/local/bin/
-COPY --from=tools-downloader /tools/httpx /usr/local/bin/
-COPY --from=tools-downloader /tools/chaos /usr/local/bin/
+# Install subfinder
+RUN echo "Installing subfinder..." && \
+    curl -L -o subfinder.zip https://github.com/projectdiscovery/subfinder/releases/download/v2.6.3/subfinder_2.6.3_linux_amd64.zip && \
+    unzip -o subfinder.zip -d /tmp && \
+    mv /tmp/subfinder /usr/local/bin/ && \
+    chmod +x /usr/local/bin/subfinder && \
+    rm subfinder.zip
+
+# Install httpx
+RUN echo "Installing httpx..." && \
+    curl -L -o httpx.zip https://github.com/projectdiscovery/httpx/releases/download/v1.3.7/httpx_1.3.7_linux_amd64.zip && \
+    unzip -o httpx.zip -d /tmp && \
+    mv /tmp/httpx /usr/local/bin/ && \
+    chmod +x /usr/local/bin/httpx && \
+    rm httpx.zip
+
+# Install chaos
+RUN echo "Installing chaos..." && \
+    curl -L -o chaos.zip https://github.com/projectdiscovery/chaos-client/releases/download/v0.5.2/chaos-client_0.5.2_linux_amd64.zip && \
+    unzip -o chaos.zip -d /tmp && \
+    mv /tmp/chaos-client /usr/local/bin/chaos && \
+    chmod +x /usr/local/bin/chaos && \
+    rm chaos.zip
 
 # Copy Go binaries from the builder stage
 RUN mkdir -p /tmp/go-bins

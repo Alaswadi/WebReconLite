@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}WebReconLite - Lightweight Recon for Hackers{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h2 class="glitch-text">Lightweight Recon for Hackers</h2>
+        <p class="hero-description">Enumerate subdomains, probe web hosts, and discover URLs with a single scan.</p>
+        
+        <div class="scan-form-container">
+            <form id="scan-form" class="scan-form">
+                <div class="form-group">
+                    <input type="text" id="domain" name="domain" placeholder="Enter domain (e.g., example.com)" required>
+                    <div class="input-border"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Start Scan</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <h3 class="section-title">Features</h3>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h4>Subdomain Enumeration</h4>
+            <p>Discover subdomains using Subfinder, Assetfinder, Chaos, and Sublist3r.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <h4>Web Detection</h4>
+            <p>Probe hosts with Httpx to identify live websites, status codes, and titles.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h4>URL Discovery</h4>
+            <p>Find endpoints and paths with Gau from Common Crawl and Wayback Machine.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h4>Fast & Efficient</h4>
+            <p>Concurrent tool execution for quick results without sacrificing thoroughness.</p>
+        </div>
+    </div>
+</section>
+
+<div id="error-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3>Error</h3>
+        <p id="error-message"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scanForm = document.getElementById('scan-form');
+    const errorModal = document.getElementById('error-modal');
+    const errorMessage = document.getElementById('error-message');
+    const closeButton = document.querySelector('.close-button');
+    
+    // Close modal when clicking the close button
+    closeButton.addEventListener('click', function() {
+        errorModal.style.display = 'none';
+    });
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === errorModal) {
+            errorModal.style.display = 'none';
+        }
+    });
+    
+    // Handle form submission
+    scanForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const domain = document.getElementById('domain').value.trim();
+        
+        // Show loading state
+        const submitButton = scanForm.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.textContent;
+        submitButton.textContent = 'Starting Scan...';
+        submitButton.disabled = true;
+        
+        // Send request to start scan
+        fetch('/scan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `domain=${encodeURIComponent(domain)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                // Show error
+                errorMessage.textContent = data.error;
+                errorModal.style.display = 'block';
+                
+                // Reset button
+                submitButton.textContent = originalButtonText;
+                submitButton.disabled = false;
+            } else {
+                // Redirect to scan page
+                window.location.href = `/scan.html?id=${data.session_id}`;
+            }
+        })
+        .catch(error => {
+            // Show error
+            errorMessage.textContent = 'An error occurred while starting the scan. Please try again.';
+            errorModal.style.display = 'block';
+            
+            // Reset button
+            submitButton.textContent = originalButtonText;
+            submitButton.disabled = false;
+            
+            console.error('Error:', error);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  webreconlite:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webreconlite
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./app/results:/app/app/results
+    environment:
+      - SECRET_KEY=webreconlite-production-key
+      - DEBUG=False
+    restart: unless-stopped
+    networks:
+      - webreconlite-network
+
+networks:
+  webreconlite-network:
+    driver: bridge

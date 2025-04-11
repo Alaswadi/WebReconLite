@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}WebReconLite - Scan Results{% endblock %}
+
+{% block content %}
+<section class="scan-results">
+    <div class="scan-header">
+        <h2 class="glitch-text">Scan Results</h2>
+        <div class="scan-info">
+            <p>Target: <span id="target-domain" class="highlight-text">Loading...</span></p>
+            <p>Status: <span id="scan-status" class="status-text">Initializing...</span></p>
+        </div>
+    </div>
+    
+    <div class="progress-container">
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+        </div>
+        <p id="progress-text">0% - Initializing...</p>
+    </div>
+    
+    <div class="results-container">
+        <div class="results-tabs">
+            <button class="tab-button active" data-tab="subdomains">Subdomains</button>
+            <button class="tab-button" data-tab="live-hosts">Live Hosts</button>
+            <button class="tab-button" data-tab="urls">URLs</button>
+        </div>
+        
+        <div class="tab-content">
+            <div id="subdomains-tab" class="tab-pane active">
+                <div class="tab-header">
+                    <h3>Subdomains</h3>
+                    <div class="tab-actions">
+                        <input type="text" id="subdomains-filter" placeholder="Filter subdomains..." class="filter-input">
+                        <span id="subdomains-count" class="count-badge">0</span>
+                    </div>
+                </div>
+                <div class="results-list" id="subdomains-list">
+                    <p class="loading-text">Waiting for results...</p>
+                </div>
+            </div>
+            
+            <div id="live-hosts-tab" class="tab-pane">
+                <div class="tab-header">
+                    <h3>Live Hosts</h3>
+                    <div class="tab-actions">
+                        <input type="text" id="live-hosts-filter" placeholder="Filter hosts..." class="filter-input">
+                        <span id="live-hosts-count" class="count-badge">0</span>
+                    </div>
+                </div>
+                <div class="results-list" id="live-hosts-list">
+                    <p class="loading-text">Waiting for results...</p>
+                </div>
+            </div>
+            
+            <div id="urls-tab" class="tab-pane">
+                <div class="tab-header">
+                    <h3>URLs</h3>
+                    <div class="tab-actions">
+                        <input type="text" id="urls-filter" placeholder="Filter URLs..." class="filter-input">
+                        <span id="urls-count" class="count-badge">0</span>
+                    </div>
+                </div>
+                <div class="results-list" id="urls-list">
+                    <p class="loading-text">Waiting for results...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="action-buttons">
+        <button id="download-button" class="btn btn-secondary">Download Results</button>
+        <button id="cancel-button" class="btn btn-danger">Cancel Scan</button>
+    </div>
+</section>
+
+<div id="error-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3>Error</h3>
+        <p id="error-message"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get session ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('id');
+    
+    if (!sessionId) {
+        window.location.href = '/';
+        return;
+    }
+    
+    // Elements
+    const targetDomain = document.getElementById('target-domain');
+    const scanStatus = document.getElementById('scan-status');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const subdomainsList = document.getElementById('subdomains-list');
+    const liveHostsList = document.getElementById('live-hosts-list');
+    const urlsList = document.getElementById('urls-list');
+    const subdomainsCount = document.getElementById('subdomains-count');
+    const liveHostsCount = document.getElementById('live-hosts-count');
+    const urlsCount = document.getElementById('urls-count');
+    const downloadButton = document.getElementById('download-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const errorModal = document.getElementById('error-modal');
+    const errorMessage = document.getElementById('error-message');
+    const closeButton = document.querySelector('.close-button');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    const subdomainsFilter = document.getElementById('subdomains-filter');
+    const liveHostsFilter = document.getElementById('live-hosts-filter');
+    const urlsFilter = document.getElementById('urls-filter');
+    
+    // Tab switching
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons and panes
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding pane
+            this.classList.add('active');
+            document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
+        });
+    });
+    
+    // Close modal when clicking the close button
+    closeButton.addEventListener('click', function() {
+        errorModal.style.display = 'none';
+    });
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === errorModal) {
+            errorModal.style.display = 'none';
+        }
+    });
+    
+    // Download results
+    downloadButton.addEventListener('click', function() {
+        window.location.href = `/download/${sessionId}`;
+    });
+    
+    // Cancel scan
+    cancelButton.addEventListener('click', function() {
+        if (confirm('Are you sure you want to cancel this scan?')) {
+            fetch(`/cancel/${sessionId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    errorMessage.textContent = data.error;
+                    errorModal.style.display = 'block';
+                } else {
+                    scanStatus.textContent = 'Cancelled';
+                    scanStatus.className = 'status-text status-cancelled';
+                    progressText.textContent = 'Scan cancelled by user';
+                }
+            })
+            .catch(error => {
+                errorMessage.textContent = 'An error occurred while cancelling the scan.';
+                errorModal.style.display = 'block';
+                console.error('Error:', error);
+            });
+        }
+    });
+    
+    // Filter functions
+    function setupFilter(filterInput, listElement, dataItems, renderFunction) {
+        filterInput.addEventListener('input', function() {
+            const filterValue = this.value.toLowerCase();
+            const filteredItems = dataItems.filter(item => {
+                if (typeof item === 'string') {
+                    return item.toLowerCase().includes(filterValue);
+                } else if (typeof item === 'object') {
+                    return JSON.stringify(item).toLowerCase().includes(filterValue);
+                }
+                return false;
+            });
+            renderFunction(filteredItems);
+        });
+    }
+    
+    // Render functions
+    function renderSubdomains(subdomains) {
+        if (!subdomains || subdomains.length === 0) {
+            subdomainsList.innerHTML = '<p class="no-results">No subdomains found yet.</p>';
+            subdomainsCount.textContent = '0';
+            return;
+        }
+        
+        subdomainsCount.textContent = subdomains.length;
+        
+        let html = '<ul class="data-list">';
+        subdomains.forEach(subdomain => {
+            html += `<li class="data-item">${subdomain}</li>`;
+        });
+        html += '</ul>';
+        
+        subdomainsList.innerHTML = html;
+    }
+    
+    function renderLiveHosts(hosts) {
+        if (!hosts || hosts.length === 0) {
+            liveHostsList.innerHTML = '<p class="no-results">No live hosts found yet.</p>';
+            liveHostsCount.textContent = '0';
+            return;
+        }
+        
+        liveHostsCount.textContent = hosts.length;
+        
+        let html = '<ul class="data-list">';
+        hosts.forEach(host => {
+            const statusClass = host.status_code >= 200 && host.status_code < 300 ? 'status-success' : 
+                               host.status_code >= 300 && host.status_code < 400 ? 'status-redirect' :
+                               host.status_code >= 400 && host.status_code < 500 ? 'status-client-error' :
+                               host.status_code >= 500 ? 'status-server-error' : '';
+            
+            html += `
+                <li class="data-item host-item">
+                    <div class="host-url"><a href="${host.url}" target="_blank">${host.url}</a></div>
+                    <div class="host-status ${statusClass}">${host.status_code}</div>
+                    <div class="host-title">${host.title}</div>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        
+        liveHostsList.innerHTML = html;
+    }
+    
+    function renderUrls(urls) {
+        if (!urls || urls.length === 0) {
+            urlsList.innerHTML = '<p class="no-results">No URLs found yet.</p>';
+            urlsCount.textContent = '0';
+            return;
+        }
+        
+        urlsCount.textContent = urls.length;
+        
+        let html = '<ul class="data-list">';
+        urls.forEach(url => {
+            html += `<li class="data-item"><a href="${url}" target="_blank">${url}</a></li>`;
+        });
+        html += '</ul>';
+        
+        urlsList.innerHTML = html;
+    }
+    
+    // Store data for filtering
+    let scanData = {
+        subdomains: [],
+        live_hosts: [],
+        urls: []
+    };
+    
+    // Poll for status updates
+    function pollStatus() {
+        fetch(`/status/${sessionId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch scan status');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update domain
+                targetDomain.textContent = data.domain || 'Unknown';
+                
+                // Update status
+                scanStatus.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                scanStatus.className = 'status-text status-' + data.status;
+                
+                // Update progress
+                progressFill.style.width = `${data.progress}%`;
+                progressText.textContent = `${data.progress}% - ${data.current_tool}`;
+                
+                // Update results
+                scanData.subdomains = data.subdomains || [];
+                scanData.live_hosts = data.live_hosts || [];
+                scanData.urls = data.urls || [];
+                
+                renderSubdomains(scanData.subdomains);
+                renderLiveHosts(scanData.live_hosts);
+                renderUrls(scanData.urls);
+                
+                // Setup filters
+                setupFilter(subdomainsFilter, subdomainsList, scanData.subdomains, renderSubdomains);
+                setupFilter(liveHostsFilter, liveHostsList, scanData.live_hosts, renderLiveHosts);
+                setupFilter(urlsFilter, urlsList, scanData.urls, renderUrls);
+                
+                // Check if scan is still running
+                if (['completed', 'error', 'cancelled'].includes(data.status)) {
+                    // Disable cancel button
+                    cancelButton.disabled = true;
+                    
+                    // Show errors if any
+                    if (data.errors && data.errors.length > 0) {
+                        errorMessage.textContent = data.errors.join('\n');
+                        errorModal.style.display = 'block';
+                    }
+                    
+                    // Stop polling
+                    return;
+                }
+                
+                // Continue polling
+                setTimeout(pollStatus, 2000);
+            })
+            .catch(error => {
+                console.error('Error polling status:', error);
+                errorMessage.textContent = 'Failed to fetch scan status. Please refresh the page.';
+                errorModal.style.display = 'block';
+            });
+    }
+    
+    // Start polling
+    pollStatus();
+});
+</script>
+{% endblock %}

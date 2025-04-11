@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WebReconLite{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1><span class="neon-text">WebRecon</span><span class="lite-text">Lite</span></h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="{{ url_for('main.index') }}" class="nav-link">Home</a></li>
+                </ul>
+            </nav>
+        </header>
+        
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer>
+            <p>&copy; {% block year %}2025{% endblock %} WebReconLite | <a href="https://github.com/yourusername/webreconlite" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

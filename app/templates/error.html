@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}WebReconLite - Error{% endblock %}
+
+{% block content %}
+<section class="error-section">
+    <div class="error-container">
+        <h2 class="glitch-text">System Malfunction</h2>
+        <div class="error-message">
+            <p class="error-code">ERROR</p>
+            <p class="error-description">{{ error }}</p>
+        </div>
+        <div class="error-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary">Return to Home</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

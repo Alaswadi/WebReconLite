@@ -1,5 +1,36 @@
 # Use a multi-stage build approach
-# Stage 1: Build the Go tools
+# Stage 1: Download pre-built binaries for tools
+FROM alpine:latest AS tools-downloader
+
+# Install dependencies
+RUN apk add --no-cache curl unzip
+
+# Create directory for tools
+WORKDIR /tools
+
+# Download subfinder
+RUN echo "Downloading subfinder..." && \
+    curl -L -o subfinder.zip https://github.com/projectdiscovery/subfinder/releases/download/v2.6.3/subfinder_2.6.3_linux_amd64.zip && \
+    unzip subfinder.zip && \
+    chmod +x subfinder && \
+    rm subfinder.zip
+
+# Download httpx
+RUN echo "Downloading httpx..." && \
+    curl -L -o httpx.zip https://github.com/projectdiscovery/httpx/releases/download/v1.3.7/httpx_1.3.7_linux_amd64.zip && \
+    unzip httpx.zip && \
+    chmod +x httpx && \
+    rm httpx.zip
+
+# Download chaos
+RUN echo "Downloading chaos..." && \
+    curl -L -o chaos.zip https://github.com/projectdiscovery/chaos-client/releases/download/v0.5.2/chaos-client_0.5.2_linux_amd64.zip && \
+    unzip chaos.zip && \
+    chmod +x chaos-client && \
+    mv chaos-client chaos && \
+    rm chaos.zip
+
+# Stage 2: Build the Go tools (for tools that don't have pre-built binaries)
 FROM golang:1.19 AS go-builder
 
 # Set up Go environment
@@ -9,18 +40,9 @@ ENV CGO_ENABLED=0
 # Install dependencies
 RUN apt-get update && apt-get install -y git
 
-# Install Go tools one by one with proper error handling
-RUN echo "Installing subfinder..." && \
-    go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest || echo "Failed to install subfinder"
-
+# Install assetfinder and gau
 RUN echo "Installing assetfinder..." && \
     go install -v github.com/tomnomnom/assetfinder@latest || echo "Failed to install assetfinder"
-
-RUN echo "Installing chaos..." && \
-    go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest || echo "Failed to install chaos"
-
-RUN echo "Installing httpx..." && \
-    go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest || echo "Failed to install httpx"
 
 RUN echo "Installing gau..." && \
     go install -v github.com/lc/gau/v2/cmd/gau@latest || echo "Failed to install gau"
@@ -28,7 +50,7 @@ RUN echo "Installing gau..." && \
 # List installed binaries
 RUN ls -la /go/bin/
 
-# Stage 2: Build the Python application
+# Stage 3: Build the Python application
 FROM python:3.9-slim
 
 # Set working directory
@@ -47,8 +69,13 @@ RUN apt-get update && apt-get install -y \
 # Upgrade pip
 RUN pip install --upgrade pip
 
-# Create directories for Go binaries
+# Create directories for binaries
 RUN mkdir -p /usr/local/bin
+
+# Copy pre-built binaries from the tools-downloader stage
+COPY --from=tools-downloader /tools/subfinder /usr/local/bin/
+COPY --from=tools-downloader /tools/httpx /usr/local/bin/
+COPY --from=tools-downloader /tools/chaos /usr/local/bin/
 
 # Copy Go binaries from the builder stage
 RUN mkdir -p /tmp/go-bins

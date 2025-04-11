@@ -36,6 +36,39 @@ fi
 echo "Checking tool availability:"
 /usr/local/bin/check-tools.sh
 
+# Test each tool
+echo "\nTesting tools:\n"
+
+if command -v subfinder > /dev/null 2>&1; then
+    echo "Testing subfinder..."
+    subfinder -version || echo "subfinder version check failed"
+fi
+
+if command -v httpx > /dev/null 2>&1; then
+    echo "Testing httpx..."
+    httpx -version || echo "httpx version check failed"
+fi
+
+if command -v chaos > /dev/null 2>&1; then
+    echo "Testing chaos..."
+    chaos -version || echo "chaos version check failed"
+fi
+
+if command -v assetfinder > /dev/null 2>&1; then
+    echo "Testing assetfinder..."
+    echo "assetfinder has no version flag, but it's in PATH"
+fi
+
+if command -v gau > /dev/null 2>&1; then
+    echo "Testing gau..."
+    gau -version || echo "gau version check failed"
+fi
+
+if command -v sublist3r > /dev/null 2>&1; then
+    echo "Testing sublist3r..."
+    echo "sublist3r has no version flag, but it's in PATH"
+fi
+
 # Start Gunicorn
 echo "Starting Gunicorn..."
 exec gunicorn --bind 0.0.0.0:8001 --workers 4 --timeout 120 --log-level debug wsgi:app

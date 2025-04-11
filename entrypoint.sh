@@ -68,7 +68,13 @@ fi
 
 if command -v gau > /dev/null 2>&1; then
     echo "Testing gau..."
-    gau -version || echo "gau version check failed"
+    echo "Checking gau version and available flags:"
+    gau -h || gau --help || echo "gau help check failed"
+    gau -version || gau --version || echo "gau version check failed"
+
+    # Try to determine which output flag to use
+    echo "Checking gau output flags:"
+    gau -h 2>&1 | grep -E -- "-o|--o|-output|--output" || echo "No output flag found in help"
 fi
 
 if command -v sublist3r > /dev/null 2>&1; then

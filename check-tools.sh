@@ -42,7 +42,14 @@ else
 fi
 
 check_tool httpx
-check_tool gau
+
+# Special check for gau with version info
+if check_tool gau; then
+  echo "Checking gau version and flags:"
+  gau -h 2>&1 | grep -E -- "-o|--o|-output|--output" || echo "  No output flag found in help"
+  gau -version 2>&1 || gau --version 2>&1 || echo "  No version flag found"
+fi
+
 check_tool sublist3r
 
 # Print summary

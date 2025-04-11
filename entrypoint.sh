@@ -79,7 +79,32 @@ fi
 
 if command -v sublist3r > /dev/null 2>&1; then
     echo "Testing sublist3r..."
-    echo "sublist3r has no version flag, but it's in PATH"
+    echo "Checking Sublist3r installation:"
+
+    # Check possible locations
+    if [ -f "/opt/Sublist3r/sublist3r.py" ]; then
+        echo "  Found at: /opt/Sublist3r/sublist3r.py"
+    elif [ -f "/app/Sublist3r/sublist3r.py" ]; then
+        echo "  Found at: /app/Sublist3r/sublist3r.py"
+    elif [ -f "$(pwd)/Sublist3r/sublist3r.py" ]; then
+        echo "  Found at: $(pwd)/Sublist3r/sublist3r.py"
+    elif [ -f "$(pwd)/sublist3r.py" ]; then
+        echo "  Found at: $(pwd)/sublist3r.py"
+    else
+        echo "  WARNING: sublist3r wrapper is in PATH but sublist3r.py not found in expected locations"
+        echo "  The wrapper script will use fallback mode"
+    fi
+
+    # Test the wrapper
+    echo "  Testing wrapper with dummy domain..."
+    sublist3r -d example.com -o /tmp/sublist3r_test.txt
+    if [ -f "/tmp/sublist3r_test.txt" ]; then
+        echo "  Wrapper test successful, created output file"
+        cat /tmp/sublist3r_test.txt
+        rm /tmp/sublist3r_test.txt
+    else
+        echo "  Wrapper test failed, no output file created"
+    fi
 fi
 
 # Start Gunicorn

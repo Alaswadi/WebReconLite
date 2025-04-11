@@ -113,7 +113,8 @@ def run_chaos(domain, output_file):
 
 def run_sublist3r(domain, output_file):
     """Run Sublist3r for subdomain enumeration."""
-    command = f"python3 sublist3r.py -d {domain} -o {output_file}"
+    # Use the wrapper script that's in PATH
+    command = f"sublist3r -d {domain} -o {output_file}"
     return run_tool("Sublist3r", command)
 
 def run_httpx(subdomains_file, output_file):

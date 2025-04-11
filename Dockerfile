@@ -77,9 +77,16 @@ RUN if [ -n "$(ls -A /tmp/go-bins 2>/dev/null)" ]; then \
 RUN echo "Checking available binaries:" && ls -la /usr/local/bin/
 
 # Install Sublist3r
-RUN git clone https://github.com/aboul3la/Sublist3r.git /opt/Sublist3r || echo "Failed to clone Sublist3r"
+RUN git clone https://github.com/aboul3la/Sublist3r.git /opt/Sublist3r || echo "Failed to clone Sublist3r to /opt/Sublist3r"
 RUN if [ -d "/opt/Sublist3r" ]; then \
         cd /opt/Sublist3r && \
+        pip install -r requirements.txt || echo "Failed to install Sublist3r requirements"; \
+    fi
+
+# Also clone Sublist3r to /app/Sublist3r as a backup
+RUN git clone https://github.com/aboul3la/Sublist3r.git /app/Sublist3r || echo "Failed to clone Sublist3r to /app/Sublist3r"
+RUN if [ -d "/app/Sublist3r" ]; then \
+        cd /app/Sublist3r && \
         pip install -r requirements.txt || echo "Failed to install Sublist3r requirements"; \
     fi
 

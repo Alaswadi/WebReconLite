@@ -18,7 +18,7 @@ services:
     networks:
       - webreconlite-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/tools" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/tools || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -114,6 +114,59 @@ For production deployment, it's recommended to use Gunicorn with Nginx:
 
 ## Docker Deployment
 
+### Using Docker Compose (Recommended)
+
+1. Build and start the container:
+   ```
+   docker-compose up -d
+   ```
+
+2. Check the container status:
+   ```
+   docker-compose ps
+   ```
+
+3. View logs:
+   ```
+   docker-compose logs -f
+   ```
+
+4. Stop the container:
+   ```
+   docker-compose down
+   ```
+
+### Using the Helper Script
+
+A helper script is provided to simplify Docker operations:
+
+1. Make the script executable:
+   ```
+   chmod +x run.sh
+   ```
+
+2. Build the Docker image:
+   ```
+   ./run.sh build
+   ```
+
+3. Start the container:
+   ```
+   ./run.sh start
+   ```
+
+4. Check which tools are installed:
+   ```
+   ./run.sh tools
+   ```
+
+5. Show help:
+   ```
+   ./run.sh help
+   ```
+
+### Manual Docker Commands
+
 1. Build the Docker image:
    ```
    docker build -t webreconlite .
@@ -124,10 +177,19 @@ For production deployment, it's recommended to use Gunicorn with Nginx:
    docker run -p 8001:8001 webreconlite
    ```
 
-3. Or use Docker Compose:
-   ```
-   docker-compose up -d
-   ```
+## Tool Availability
+
+WebReconLite is designed to work even if some or all of the external reconnaissance tools are not installed. The application will:
+
+1. Check which tools are available at startup
+2. Display a warning in the UI if tools are missing
+3. Use fallback mechanisms to provide sample data for missing tools
+4. Continue to function with limited capabilities
+
+To get the full functionality, ensure all the required tools are properly installed. You can check which tools are available by:
+
+- Visiting the `/tools` endpoint in your browser
+- Running `./run.sh tools` if using Docker
 
 ## Security Considerations
 

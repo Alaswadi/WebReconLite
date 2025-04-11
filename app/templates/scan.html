@@ -81,6 +81,26 @@
         <p id="error-message"></p>
     </div>
 </div>
+
+<div id="gau-modal" class="modal">
+    <div class="modal-content gau-modal-content">
+        <span class="close-button">&times;</span>
+        <h3>Gau Results for <span id="gau-host"></span></h3>
+        <div class="gau-status">
+            <p id="gau-status-message">Running Gau search...</p>
+            <div class="loader" id="gau-loader"></div>
+        </div>
+        <div class="gau-results" id="gau-results">
+            <div class="gau-filter">
+                <input type="text" id="gau-filter-input" placeholder="Filter URLs..." class="filter-input">
+                <span id="gau-count" class="count-badge">0</span>
+            </div>
+            <div class="results-list" id="gau-urls-list">
+                <p class="loading-text">Waiting for results...</p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -230,6 +250,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="host-url"><a href="${host.url}" target="_blank">${host.url}</a></div>
                     <div class="host-status ${statusClass}">${host.status_code}</div>
                     <div class="host-title">${host.title}</div>
+                    <div class="host-actions">
+                        <button class="btn btn-small btn-secondary run-gau-btn" data-url="${host.url}" data-session="${sessionId}">Gau</button>
+                    </div>
                 </li>
             `;
         });
@@ -325,6 +348,115 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Start polling
     pollStatus();
+
+    // Gau Modal Elements
+    const gauModal = document.getElementById('gau-modal');
+    const gauHost = document.getElementById('gau-host');
+    const gauStatusMessage = document.getElementById('gau-status-message');
+    const gauLoader = document.getElementById('gau-loader');
+    const gauResults = document.getElementById('gau-results');
+    const gauUrlsList = document.getElementById('gau-urls-list');
+    const gauCount = document.getElementById('gau-count');
+    const gauFilterInput = document.getElementById('gau-filter-input');
+    const gauCloseButton = gauModal.querySelector('.close-button');
+
+    // Close Gau modal when clicking the close button
+    gauCloseButton.addEventListener('click', function() {
+        gauModal.style.display = 'none';
+    });
+
+    // Close Gau modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === gauModal) {
+            gauModal.style.display = 'none';
+        }
+    });
+
+    // Function to render Gau URLs
+    function renderGauUrls(urls) {
+        if (!urls || urls.length === 0) {
+            gauUrlsList.innerHTML = '<p class="no-results">No URLs found.</p>';
+            gauCount.textContent = '0';
+            return;
+        }
+
+        gauCount.textContent = urls.length;
+
+        let html = '<ul class="data-list">';
+        urls.forEach(url => {
+            html += `<li class="data-item"><a href="${url}" target="_blank">${url}</a></li>`;
+        });
+        html += '</ul>';
+
+        gauUrlsList.innerHTML = html;
+    }
+
+    // Function to run Gau for a specific host
+    function runGauForHost(url, sessionId) {
+        // Show the modal
+        gauModal.style.display = 'block';
+        gauHost.textContent = new URL(url).hostname;
+        gauStatusMessage.textContent = 'Running Gau search...';
+        gauLoader.style.display = 'block';
+        gauResults.style.display = 'none';
+        gauUrlsList.innerHTML = '<p class="loading-text">Waiting for results...</p>';
+
+        // Make the API call
+        fetch('/run-gau', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                url: url,
+                session_id: sessionId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            gauLoader.style.display = 'none';
+            gauResults.style.display = 'block';
+
+            if (data.error) {
+                gauStatusMessage.textContent = `Error: ${data.error}`;
+                gauUrlsList.innerHTML = '<p class="error-text">Failed to get URLs.</p>';
+                return;
+            }
+
+            // Update status message
+            gauStatusMessage.textContent = `Found ${data.url_count} URLs for ${data.host}`;
+
+            // Render the URLs
+            renderGauUrls(data.urls);
+
+            // Set up filtering
+            gauFilterInput.addEventListener('input', function() {
+                const filterValue = this.value.toLowerCase();
+                const filteredUrls = data.urls.filter(url =>
+                    url.toLowerCase().includes(filterValue)
+                );
+                renderGauUrls(filteredUrls);
+            });
+        })
+        .catch(error => {
+            console.error('Error running Gau:', error);
+            gauLoader.style.display = 'none';
+            gauStatusMessage.textContent = 'Error running Gau search';
+            gauUrlsList.innerHTML = `<p class="error-text">Error: ${error.message || 'Unknown error'}</p>`;
+        });
+    }
+
+    // Add event listeners to Gau buttons (using event delegation)
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('run-gau-btn')) {
+            const url = event.target.getAttribute('data-url');
+            const sessionId = event.target.getAttribute('data-session');
+
+            if (url && sessionId) {
+                runGauForHost(url, sessionId);
+            }
+        }
+    });
 });
 </script>
 {% endblock %}

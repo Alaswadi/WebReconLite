@@ -27,6 +27,56 @@ def tools_status():
         'total_count': len(status)
     })
 
+@main.route('/run-gau', methods=['POST'])
+def run_gau_for_host():
+    """Run Gau for a specific host."""
+    from app.tools import run_gau, parse_gau_output
+
+    # Get the host URL from the request
+    data = request.get_json()
+    if not data or 'url' not in data:
+        return jsonify({'error': 'No URL provided'}), 400
+
+    url = data['url']
+    session_id = data.get('session_id')
+
+    if not session_id:
+        return jsonify({'error': 'No session ID provided'}), 400
+
+    # Create a directory for this scan if it doesn't exist
+    scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
+    if not os.path.exists(scan_dir):
+        return jsonify({'error': 'Invalid session ID'}), 404
+
+    # Extract domain from URL
+    from urllib.parse import urlparse
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc
+
+    if not domain:
+        return jsonify({'error': 'Invalid URL'}), 400
+
+    # Create a unique file for this host's Gau results
+    host_gau_file = os.path.join(scan_dir, f'gau_{domain}.txt')
+
+    try:
+        # Run Gau for this specific host
+        run_gau(domain, host_gau_file)
+
+        # Parse the results
+        urls = parse_gau_output(host_gau_file)
+
+        return jsonify({
+            'success': True,
+            'host': domain,
+            'url_count': len(urls),
+            'urls': urls[:100]  # Limit to first 100 URLs to avoid overwhelming the response
+        })
+    except Exception as e:
+        return jsonify({
+            'error': f'Error running Gau: {str(e)}'
+        }), 500
+
 @main.route('/scan', methods=['POST'])
 def start_scan():
     """Start a new scan for the given domain."""

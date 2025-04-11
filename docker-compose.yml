@@ -13,10 +13,20 @@ services:
     environment:
       - SECRET_KEY=webreconlite-production-key
       - DEBUG=False
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
     networks:
       - webreconlite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   webreconlite-network:
     driver: bridge
+
+volumes:
+  results-data:

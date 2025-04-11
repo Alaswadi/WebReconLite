@@ -7,7 +7,15 @@
     <div class="hero-content">
         <h2 class="glitch-text">Lightweight Recon for Hackers</h2>
         <p class="hero-description">Enumerate subdomains, probe web hosts, and discover URLs with a single scan.</p>
-        
+
+        <div id="tools-status" class="tools-status" style="display: none;">
+            <div class="status-message warning">
+                <p><strong>Warning:</strong> Some reconnaissance tools are not installed. The application will use fallback methods for missing tools.</p>
+                <p>Installed tools: <span id="installed-tools-count">0</span>/<span id="total-tools-count">6</span></p>
+                <div id="tools-details" class="tools-details"></div>
+            </div>
+        </div>
+
         <div class="scan-form-container">
             <form id="scan-form" class="scan-form">
                 <div class="form-group">
@@ -62,31 +70,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorModal = document.getElementById('error-modal');
     const errorMessage = document.getElementById('error-message');
     const closeButton = document.querySelector('.close-button');
-    
+    const toolsStatus = document.getElementById('tools-status');
+    const installedToolsCount = document.getElementById('installed-tools-count');
+    const totalToolsCount = document.getElementById('total-tools-count');
+    const toolsDetails = document.getElementById('tools-details');
+
+    // Check tool status
+    fetch('/tools')
+        .then(response => response.json())
+        .then(data => {
+            installedToolsCount.textContent = data.available_count;
+            totalToolsCount.textContent = data.total_count;
+
+            // Show warning if not all tools are installed
+            if (data.available_count < data.total_count) {
+                toolsStatus.style.display = 'block';
+
+                // Show details of which tools are installed
+                let detailsHtml = '<ul>';
+                for (const [tool, installed] of Object.entries(data.tools)) {
+                    const status = installed ? '✅ Installed' : '❌ Not installed';
+                    detailsHtml += `<li><strong>${tool}</strong>: ${status}</li>`;
+                }
+                detailsHtml += '</ul>';
+                toolsDetails.innerHTML = detailsHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking tool status:', error);
+        });
+
     // Close modal when clicking the close button
     closeButton.addEventListener('click', function() {
         errorModal.style.display = 'none';
     });
-    
+
     // Close modal when clicking outside of it
     window.addEventListener('click', function(event) {
         if (event.target === errorModal) {
             errorModal.style.display = 'none';
         }
     });
-    
+
     // Handle form submission
     scanForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const domain = document.getElementById('domain').value.trim();
-        
+
         // Show loading state
         const submitButton = scanForm.querySelector('button[type="submit"]');
         const originalButtonText = submitButton.textContent;
         submitButton.textContent = 'Starting Scan...';
         submitButton.disabled = true;
-        
+
         // Send request to start scan
         fetch('/scan', {
             method: 'POST',
@@ -101,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show error
                 errorMessage.textContent = data.error;
                 errorModal.style.display = 'block';
-                
+
                 // Reset button
                 submitButton.textContent = originalButtonText;
                 submitButton.disabled = false;
@@ -114,11 +151,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show error
             errorMessage.textContent = 'An error occurred while starting the scan. Please try again.';
             errorModal.style.display = 'block';
-            
+
             // Reset button
             submitButton.textContent = originalButtonText;
             submitButton.disabled = false;
-            
+
             console.error('Error:', error);
         });
     });

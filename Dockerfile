@@ -6,28 +6,42 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
-    golang \
     wget \
+    curl \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Go
+RUN curl -OL https://golang.org/dl/go1.19.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.19.linux-amd64.tar.gz && \
+    rm go1.19.linux-amd64.tar.gz
+
 # Set Go environment variables
+ENV GOROOT /usr/local/go
 ENV GOPATH /root/go
-ENV PATH $PATH:/root/go/bin
+ENV PATH $PATH:/usr/local/go/bin:/root/go/bin
+
+# Verify Go installation
+RUN go version
+
+# Create Go directories
+RUN mkdir -p "${GOPATH}/src" "${GOPATH}/bin" && chmod -R 777 "${GOPATH}"
 
 # Install reconnaissance tools
-RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
-    go install -v github.com/tomnomnom/assetfinder@latest && \
-    go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest && \
-    go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
-    go install -v github.com/lc/gau/v2/cmd/gau@latest
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+RUN go install -v github.com/tomnomnom/assetfinder@latest
+RUN go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest
+RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+RUN go install -v github.com/lc/gau/v2/cmd/gau@latest
 
 # Install Sublist3r
 RUN git clone https://github.com/aboul3la/Sublist3r.git /opt/Sublist3r && \
     cd /opt/Sublist3r && \
     pip install -r requirements.txt
 
-# Add Sublist3r to PATH
-ENV PATH $PATH:/opt/Sublist3r
+# Create a wrapper script for Sublist3r
+RUN echo '#!/bin/bash\npython /opt/Sublist3r/sublist3r.py "$@"' > /usr/local/bin/sublist3r && \
+    chmod +x /usr/local/bin/sublist3r
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .

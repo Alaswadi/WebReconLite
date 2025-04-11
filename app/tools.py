@@ -4,6 +4,7 @@ import time
 import threading
 import json
 import shutil
+import re
 from app.utils import deduplicate_list
 
 def check_tool_installed(tool_name):
@@ -117,7 +118,7 @@ def run_sublist3r(domain, output_file):
 
 def run_httpx(subdomains_file, output_file):
     """Run Httpx for web detection."""
-    command = f"httpx -l {subdomains_file} -silent -title -status-code -o {output_file}"
+    command = f"httpx -l {subdomains_file} -silent -title -status-code -no-color -o {output_file}"
     return run_tool("Httpx", command)
 
 def run_gau(domain, output_file):
@@ -138,10 +139,14 @@ def parse_httpx_output(file_path):
     if not os.path.exists(file_path):
         return []
 
+    # Regular expression to remove ANSI color codes
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
     live_hosts = []
     with open(file_path, 'r') as f:
         for line in f:
-            line = line.strip()
+            # Remove ANSI color codes
+            line = ansi_escape.sub('', line.strip())
             if not line:
                 continue
 
@@ -158,7 +163,7 @@ def parse_httpx_output(file_path):
                 status_start = parts[1].find('[') + 1
                 status_end = parts[1].find(']', status_start)
                 if status_start < status_end:
-                    status_code = parts[1][status_start:status_end]
+                    status_code = parts[1][status_start:status_end].strip()
 
             # Extract title
             title = "No Title"
@@ -166,11 +171,28 @@ def parse_httpx_output(file_path):
             if title_start > 0:
                 title_end = parts[1].find(']', title_start)
                 if title_end > title_start:
-                    title = parts[1][title_start:title_end]
+                    title = parts[1][title_start:title_end].strip()
+
+            # Clean up status code (remove any remaining color codes or spaces)
+            status_code = re.sub(r'[^0-9]', '', status_code) or "Unknown"
+
+            # Determine status class for color coding in the UI
+            status_class = ''
+            if status_code.isdigit():
+                code = int(status_code)
+                if 200 <= code < 300:
+                    status_class = 'success'  # Green
+                elif 300 <= code < 400:
+                    status_class = 'redirect'  # Blue
+                elif 400 <= code < 500:
+                    status_class = 'client-error'  # Red
+                elif 500 <= code < 600:
+                    status_class = 'server-error'  # Red
 
             live_hosts.append({
                 'url': url,
                 'status_code': status_code,
+                'status_class': status_class,
                 'title': title
             })
 

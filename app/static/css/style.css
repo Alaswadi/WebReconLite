@@ -663,13 +663,13 @@ input[type="text"]:focus + .input-border {
 }
 
 .status-redirect {
-    background-color: rgba(255, 255, 0, 0.1);
-    color: var(--warning-color);
+    background-color: rgba(0, 0, 255, 0.1);
+    color: #0088ff; /* Blue color for redirects */
 }
 
 .status-client-error {
-    background-color: rgba(255, 165, 0, 0.1);
-    color: orange;
+    background-color: rgba(255, 0, 0, 0.1);
+    color: var(--danger-color);
 }
 
 .status-server-error {

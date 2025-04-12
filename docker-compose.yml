@@ -37,7 +37,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: webreconlite-worker
-    command: celery-worker
+    command: ["celery", "-A", "celery_app", "worker", "--loglevel=info"]
     volumes:
       - ./app/results:/app/app/results
     environment:
@@ -58,7 +58,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: webreconlite-flower
-    command: flower
+    command: ["celery", "-A", "celery_app", "flower", "--port=5555"]
     ports:
       - "5555:5555"
     environment:

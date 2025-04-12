@@ -1,18 +1,2 @@
-from celery import Celery
-
-def make_celery(app):
-    """Create a Celery instance using the Flask app's configuration."""
-    celery = Celery(
-        app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
-    )
-    celery.conf.update(app.config)
-
-    class ContextTask(celery.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery.Task = ContextTask
-    return celery
+# This file is needed for Celery CLI to find the Celery instance
+from celery_app import celery

@@ -2,7 +2,6 @@ from flask import Flask
 import os
 import sys
 from dotenv import load_dotenv
-from app.celery import make_celery
 
 # Print debugging information
 print(f"Python version: {sys.version}")
@@ -14,8 +13,7 @@ print(f"Files in app directory: {os.listdir('./app')}")
 print("Loading environment variables...")
 load_dotenv()
 
-# Initialize Celery
-celery = None
+# Celery is initialized in celery_app.py
 
 def create_app():
     print("Creating Flask application...")
@@ -58,9 +56,8 @@ def create_app():
             }
         }
 
-    # Initialize Celery
-    global celery
-    celery = make_celery(app)
+    # Celery is initialized in celery_app.py
+    # We'll set up Flask app context for Celery tasks in celery_worker.py
 
     print("Flask application created successfully")
     return app

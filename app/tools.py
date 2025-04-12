@@ -122,8 +122,8 @@ def run_httpx(subdomains_file, output_file):
     """Run Httpx for web detection."""
     # Try different command formats for different httpx versions
     try:
-        # First try with newer flags including technology detection
-        command = f"httpx -l {subdomains_file} -silent -title -status-code -tech-detect -no-color -o {output_file}"
+        # First try with newer flags including technology detection but without title
+        command = f"httpx -l {subdomains_file} -silent -status-code -tech-detect -no-color -o {output_file}"
         result = run_tool("Httpx", command)
 
         # Check if the output file was created and has content
@@ -132,7 +132,7 @@ def run_httpx(subdomains_file, output_file):
 
         # If that fails, try with older version flags
         print("First httpx command failed, trying alternative format...")
-        command = f"httpx -l {subdomains_file} -silent -title -status-code -no-color -o {output_file}"
+        command = f"httpx -l {subdomains_file} -silent -status-code -no-color -o {output_file}"
         return run_tool("Httpx", command)
     except Exception as e:
         print(f"Error running httpx: {str(e)}")
@@ -142,7 +142,7 @@ def run_httpx(subdomains_file, output_file):
                 for line in sf:
                     subdomain = line.strip()
                     if subdomain:
-                        f.write(f"https://{subdomain} [200] [No Title]\n")
+                        f.write(f"https://{subdomain} [200]\n")
         return f"Httpx failed: {str(e)}, using fallback output"
 
 def run_gau(domain, output_file):
@@ -317,17 +317,12 @@ def parse_httpx_output(file_path):
                 if status_start < status_end:
                     status_code = parts[1][status_start:status_end].strip()
 
-            # Extract title
-            title = "No Title"
-            title_start = parts[1].find('[', parts[1].find(']') + 1) + 1
-            if title_start > 0:
-                title_end = parts[1].find(']', title_start)
-                if title_end > title_start:
-                    title = parts[1][title_start:title_end].strip()
+            # We're not extracting title anymore
+            title = ""
 
             # Extract technology if available
             tech = "Unknown"
-            remaining_text = parts[1][title_end+1:] if title_end > 0 else ""
+            remaining_text = parts[1][parts[1].find(']')+1:] if ']' in parts[1] else ""
 
             # Check if there's another bracketed section after the title
             if '[' in remaining_text and ']' in remaining_text:
@@ -370,7 +365,6 @@ def parse_httpx_output(file_path):
                 'url': url,
                 'status_code': status_code,
                 'status_class': status_class,
-                'title': title,
                 'technology': tech
             })
 

@@ -690,8 +690,8 @@ input[type="text"]:focus + .input-border {
 }
 
 .host-tech {
-    flex: 1;
-    min-width: 100px;
+    flex: 2;
+    min-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -3,6 +3,7 @@ import os
 import uuid
 import json
 import threading
+from celery_app import celery
 from celery.result import AsyncResult
 from app.tools import run_subdomain_enumeration, run_web_detection, get_tool_status
 from app.utils import validate_domain
@@ -261,8 +262,39 @@ def get_status(session_id):
         return jsonify({'error': 'Scan not found'}), 404
 
     try:
+        # Get status from file
         with open(status_file, 'r') as f:
             scan_status = json.load(f)
+
+        # Check if there's an active task for this scan
+        if session_id in active_scans and 'task_id' in active_scans[session_id]:
+            task_id = active_scans[session_id]['task_id']
+            task_result = AsyncResult(task_id)
+
+            # Update status based on task state
+            if task_result.state == 'PENDING':
+                scan_status['status'] = 'pending'
+                scan_status['current_tool'] = 'Waiting to start...'
+            elif task_result.state == 'FAILURE':
+                scan_status['status'] = 'error'
+                scan_status['errors'] = [str(task_result.info)]
+            elif task_result.state == 'SUCCESS':
+                scan_status['status'] = 'completed'
+                scan_status['progress'] = 100
+            elif task_result.state == 'STARTED' or task_result.state == 'PROGRESS':
+                # Task is running, status should be updated by the task itself
+                # But we can add the task state for debugging
+                scan_status['task_state'] = task_result.state
+
+                # If the task has info, update the status with it
+                if hasattr(task_result, 'info') and task_result.info:
+                    info = task_result.info
+                    if isinstance(info, dict):
+                        if 'progress' in info:
+                            scan_status['progress'] = info['progress']
+                        if 'current_tool' in info:
+                            scan_status['current_tool'] = info['current_tool']
+
         return jsonify(scan_status)
     except Exception as e:
         return jsonify({'error': f'Error reading scan status: {str(e)}'}), 500
@@ -326,7 +358,7 @@ def cancel_scan(session_id):
 @main.route('/task-status/<task_id>')
 def task_status(task_id):
     """Get the status of a Celery task."""
-    task_result = AsyncResult(task_id)
+    task_result = AsyncResult(task_id, app=celery)
 
     if task_result.state == 'PENDING':
         response = {

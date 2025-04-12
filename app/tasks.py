@@ -23,6 +23,9 @@ def run_scan_task(self, domain, session_id, results_dir):
         session_id (str): The unique session ID for this scan
         results_dir (str): The directory to store results
     """
+    print(f"Starting scan task for domain: {domain}, session_id: {session_id}")
+    print(f"Task ID: {self.request.id}")
+    print(f"Results directory: {results_dir}")
     # Create a directory for this scan
     scan_dir = os.path.join(results_dir, session_id)
     os.makedirs(scan_dir, exist_ok=True)

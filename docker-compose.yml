@@ -37,7 +37,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: webreconlite-worker
-    command: ["celery", "-A", "celery_app", "worker", "--loglevel=info"]
+    command: ["celery", "-A", "celery_worker", "worker", "--loglevel=debug", "--concurrency=1"]
     volumes:
       - ./app/results:/app/app/results
     environment:
@@ -47,6 +47,7 @@ services:
       - PDCP_API_KEY=${PDCP_API_KEY}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - C_FORCE_ROOT=true
     networks:
       - webreconlite-network
     depends_on:
@@ -64,6 +65,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - C_FORCE_ROOT=true
     networks:
       - webreconlite-network
     depends_on:

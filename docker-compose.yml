@@ -18,9 +18,13 @@ services:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
       - PDCP_API_KEY=${PDCP_API_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     restart: unless-stopped
     networks:
       - webreconlite-network
+    depends_on:
+      - redis
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8001/ || exit 1" ]
       interval: 30s
@@ -28,9 +32,63 @@ services:
       retries: 3
       start_period: 40s
 
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webreconlite-worker
+    command: celery-worker
+    volumes:
+      - ./app/results:/app/app/results
+    environment:
+      - SECRET_KEY=webreconlite-production-key
+      - DEBUG=True
+      - PYTHONUNBUFFERED=1
+      - PDCP_API_KEY=${PDCP_API_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - webreconlite-network
+    depends_on:
+      - redis
+      - webreconlite
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webreconlite-flower
+    command: flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - webreconlite-network
+    depends_on:
+      - redis
+      - celery-worker
+
+  redis:
+    image: redis:7-alpine
+    container_name: webreconlite-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - webreconlite-network
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   webreconlite-network:
     driver: bridge
 
 volumes:
   results-data:
+  redis-data:

@@ -2,6 +2,7 @@ from flask import Flask
 import os
 import sys
 from dotenv import load_dotenv
+from app.celery import make_celery
 
 # Print debugging information
 print(f"Python version: {sys.version}")
@@ -13,6 +14,9 @@ print(f"Files in app directory: {os.listdir('./app')}")
 print("Loading environment variables...")
 load_dotenv()
 
+# Initialize Celery
+celery = None
+
 def create_app():
     print("Creating Flask application...")
     app = Flask(__name__)
@@ -21,6 +25,13 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-webreconlite')
     app.config['RESULTS_DIR'] = os.path.join(app.root_path, 'results')
     app.config['DEBUG'] = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+    # Configure Celery
+    app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+    app.config['CELERY_TASK_SERIALIZER'] = 'json'
+    app.config['CELERY_RESULT_SERIALIZER'] = 'json'
+    app.config['CELERY_ACCEPT_CONTENT'] = ['json']
 
     print(f"App config: SECRET_KEY={app.config['SECRET_KEY'][:5]}..., DEBUG={app.config['DEBUG']}")
 
@@ -46,6 +57,10 @@ def create_app():
                 'SECRET_KEY': app.config['SECRET_KEY'][:5] + '...',
             }
         }
+
+    # Initialize Celery
+    global celery
+    celery = make_celery(app)
 
     print("Flask application created successfully")
     return app

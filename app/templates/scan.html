@@ -435,35 +435,90 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            gauLoader.style.display = 'none';
-            gauResults.style.display = 'block';
-
             if (data.error) {
+                gauLoader.style.display = 'none';
+                gauResults.style.display = 'block';
                 gauStatusMessage.textContent = `Error: ${data.error}`;
                 gauUrlsList.innerHTML = '<p class="error-text">Failed to get URLs.</p>';
                 return;
             }
 
-            // Update status message
-            gauStatusMessage.textContent = `Found ${data.url_count} URLs for ${data.host}`;
+            if (data.status === 'processing' && data.task_id) {
+                // Poll for task status
+                pollGauTask(data.task_id, data.host);
+            } else if (data.success && data.urls) {
+                // Direct response with results
+                gauLoader.style.display = 'none';
+                gauResults.style.display = 'block';
 
-            // Render the URLs
-            renderGauUrls(data.urls);
+                // Update status message
+                gauStatusMessage.textContent = `Found ${data.url_count} URLs for ${data.host}`;
 
-            // Set up filtering
-            gauFilterInput.addEventListener('input', function() {
-                const filterValue = this.value.toLowerCase();
-                const filteredUrls = data.urls.filter(url =>
-                    url.toLowerCase().includes(filterValue)
-                );
-                renderGauUrls(filteredUrls);
-            });
+                // Render the URLs
+                renderGauUrls(data.urls);
+
+                // Set up filtering
+                setupGauFiltering(data.urls);
+            }
         })
         .catch(error => {
             console.error('Error running Gau:', error);
             gauLoader.style.display = 'none';
             gauStatusMessage.textContent = 'Error running Gau search';
             gauUrlsList.innerHTML = `<p class="error-text">Error: ${error.message || 'Unknown error'}</p>`;
+        });
+    }
+
+    // Function to poll for Gau task status
+    function pollGauTask(taskId, host) {
+        const pollInterval = setInterval(() => {
+            fetch(`/task-status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.state === 'SUCCESS') {
+                        clearInterval(pollInterval);
+                        gauLoader.style.display = 'none';
+                        gauResults.style.display = 'block';
+
+                        const result = data.result;
+                        gauStatusMessage.textContent = `Found ${result.url_count} URLs for ${result.domain}`;
+
+                        // Render the URLs
+                        renderGauUrls(result.urls);
+
+                        // Set up filtering
+                        setupGauFiltering(result.urls);
+                    } else if (data.state === 'FAILURE') {
+                        clearInterval(pollInterval);
+                        gauLoader.style.display = 'none';
+                        gauStatusMessage.textContent = 'Error running Gau search';
+                        gauUrlsList.innerHTML = `<p class="error-text">Error: ${data.error || 'Task failed'}</p>`;
+                    } else {
+                        // Still processing
+                        const info = data.info || {};
+                        if (info.status) {
+                            gauStatusMessage.textContent = info.status;
+                        }
+                    }
+                })
+                .catch(error => {
+                    clearInterval(pollInterval);
+                    console.error('Error polling task status:', error);
+                    gauLoader.style.display = 'none';
+                    gauStatusMessage.textContent = 'Error checking task status';
+                    gauUrlsList.innerHTML = `<p class="error-text">Error: ${error.message || 'Unknown error'}</p>`;
+                });
+        }, 2000); // Poll every 2 seconds
+    }
+
+    // Function to set up Gau filtering
+    function setupGauFiltering(urls) {
+        gauFilterInput.addEventListener('input', function() {
+            const filterValue = this.value.toLowerCase();
+            const filteredUrls = urls.filter(url =>
+                url.toLowerCase().includes(filterValue)
+            );
+            renderGauUrls(filteredUrls);
         });
     }
 
@@ -538,35 +593,90 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            naabuLoader.style.display = 'none';
-            naabuResults.style.display = 'block';
-
             if (data.error) {
+                naabuLoader.style.display = 'none';
+                naabuResults.style.display = 'block';
                 naabuStatusMessage.textContent = `Error: ${data.error}`;
                 naabuPortsList.innerHTML = '<p class="error-text">Failed to scan ports.</p>';
                 return;
             }
 
-            // Update status message
-            naabuStatusMessage.textContent = `Found ${data.port_count} open ports for ${data.host}`;
+            if (data.status === 'processing' && data.task_id) {
+                // Poll for task status
+                pollNaabuTask(data.task_id, data.host);
+            } else if (data.success && data.ports) {
+                // Direct response with results
+                naabuLoader.style.display = 'none';
+                naabuResults.style.display = 'block';
 
-            // Render the ports
-            renderNaabuPorts(data.ports);
+                // Update status message
+                naabuStatusMessage.textContent = `Found ${data.port_count} open ports for ${data.host}`;
 
-            // Set up filtering
-            naabuFilterInput.addEventListener('input', function() {
-                const filterValue = this.value.toLowerCase();
-                const filteredPorts = data.ports.filter(port =>
-                    JSON.stringify(port).toLowerCase().includes(filterValue)
-                );
-                renderNaabuPorts(filteredPorts);
-            });
+                // Render the ports
+                renderNaabuPorts(data.ports);
+
+                // Set up filtering
+                setupNaabuFiltering(data.ports);
+            }
         })
         .catch(error => {
             console.error('Error running Naabu:', error);
             naabuLoader.style.display = 'none';
             naabuStatusMessage.textContent = 'Error running port scan';
             naabuPortsList.innerHTML = `<p class="error-text">Error: ${error.message || 'Unknown error'}</p>`;
+        });
+    }
+
+    // Function to poll for Naabu task status
+    function pollNaabuTask(taskId, host) {
+        const pollInterval = setInterval(() => {
+            fetch(`/task-status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.state === 'SUCCESS') {
+                        clearInterval(pollInterval);
+                        naabuLoader.style.display = 'none';
+                        naabuResults.style.display = 'block';
+
+                        const result = data.result;
+                        naabuStatusMessage.textContent = `Found ${result.port_count} open ports for ${result.domain}`;
+
+                        // Render the ports
+                        renderNaabuPorts(result.ports);
+
+                        // Set up filtering
+                        setupNaabuFiltering(result.ports);
+                    } else if (data.state === 'FAILURE') {
+                        clearInterval(pollInterval);
+                        naabuLoader.style.display = 'none';
+                        naabuStatusMessage.textContent = 'Error running port scan';
+                        naabuPortsList.innerHTML = `<p class="error-text">Error: ${data.error || 'Task failed'}</p>`;
+                    } else {
+                        // Still processing
+                        const info = data.info || {};
+                        if (info.status) {
+                            naabuStatusMessage.textContent = info.status;
+                        }
+                    }
+                })
+                .catch(error => {
+                    clearInterval(pollInterval);
+                    console.error('Error polling task status:', error);
+                    naabuLoader.style.display = 'none';
+                    naabuStatusMessage.textContent = 'Error checking task status';
+                    naabuPortsList.innerHTML = `<p class="error-text">Error: ${error.message || 'Unknown error'}</p>`;
+                });
+        }, 2000); // Poll every 2 seconds
+    }
+
+    // Function to set up Naabu filtering
+    function setupNaabuFiltering(ports) {
+        naabuFilterInput.addEventListener('input', function() {
+            const filterValue = this.value.toLowerCase();
+            const filteredPorts = ports.filter(port =>
+                JSON.stringify(port).toLowerCase().includes(filterValue)
+            );
+            renderNaabuPorts(filteredPorts);
         });
     }
 

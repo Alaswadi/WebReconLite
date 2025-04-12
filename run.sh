@@ -15,6 +15,8 @@ show_help() {
     echo "  logs        Show container logs"
     echo "  status      Check container status"
     echo "  tools       Check which tools are installed"
+    echo "  flower      Open Flower monitoring UI in browser"
+    echo "  celery      Show Celery worker logs"
     echo "  help        Show this help message"
     echo ""
 }
@@ -30,6 +32,8 @@ start_container() {
     echo "Starting WebReconLite container..."
     docker-compose up -d
     echo "WebReconLite is now running at http://localhost:8001"
+    echo "Flower monitoring is available at http://localhost:5555"
+    echo "Use './run.sh flower' to open Flower in your browser"
 }
 
 # Function to stop the container
@@ -62,6 +66,26 @@ check_tools() {
     docker-compose exec webreconlite /usr/local/bin/check-tools.sh
 }
 
+# Function to open Flower monitoring UI in browser
+open_flower() {
+    echo "Opening Flower monitoring UI in browser..."
+    if command -v xdg-open &> /dev/null; then
+        xdg-open http://localhost:5555
+    elif command -v open &> /dev/null; then
+        open http://localhost:5555
+    elif command -v start &> /dev/null; then
+        start http://localhost:5555
+    else
+        echo "Could not open browser automatically. Please visit http://localhost:5555 manually."
+    fi
+}
+
+# Function to show Celery worker logs
+show_celery_logs() {
+    echo "Showing Celery worker logs..."
+    docker-compose logs -f celery-worker
+}
+
 # Main script logic
 case "$1" in
     build)
@@ -84,6 +108,12 @@ case "$1" in
         ;;
     tools)
         check_tools
+        ;;
+    flower)
+        open_flower
+        ;;
+    celery)
+        show_celery_logs
         ;;
     help|*)
         show_help

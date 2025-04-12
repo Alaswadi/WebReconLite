@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, current_app, abort
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app, abort, url_for
 import os
 import uuid
 import json
 import threading
+from celery.result import AsyncResult
 from app.tools import run_subdomain_enumeration, run_web_detection, get_tool_status
 from app.utils import validate_domain
+from app.tasks import run_scan_task, run_gau_task, run_naabu_task
 
 # Create blueprint
 main = Blueprint('main', __name__)
@@ -60,21 +62,19 @@ def run_gau_for_host():
     host_gau_file = os.path.join(scan_dir, f'gau_{domain}.txt')
 
     try:
-        # Run Gau for this specific host
-        run_gau(domain, host_gau_file)
+        # Run Gau as a Celery task
+        task = run_gau_task.delay(domain, host_gau_file)
 
-        # Parse the results
-        urls = parse_gau_output(host_gau_file)
-
+        # Return task ID for polling
         return jsonify({
             'success': True,
             'host': domain,
-            'url_count': len(urls),
-            'urls': urls[:100]  # Limit to first 100 URLs to avoid overwhelming the response
+            'task_id': task.id,
+            'status': 'processing'
         })
     except Exception as e:
         return jsonify({
-            'error': f'Error running Gau: {str(e)}'
+            'error': f'Error starting Gau task: {str(e)}'
         }), 500
 
 @main.route('/run-naabu', methods=['POST'])
@@ -110,21 +110,19 @@ def run_naabu_for_host():
     host_naabu_file = os.path.join(scan_dir, f'naabu_{domain}.txt')
 
     try:
-        # Run Naabu for this specific host
-        run_naabu(domain, host_naabu_file)
+        # Run Naabu as a Celery task
+        task = run_naabu_task.delay(domain, host_naabu_file)
 
-        # Parse the results
-        open_ports = parse_naabu_output(host_naabu_file)
-
+        # Return task ID for polling
         return jsonify({
             'success': True,
             'host': domain,
-            'port_count': len(open_ports),
-            'ports': open_ports
+            'task_id': task.id,
+            'status': 'processing'
         })
     except Exception as e:
         return jsonify({
-            'error': f'Error running Naabu: {str(e)}'
+            'error': f'Error starting Naabu task: {str(e)}'
         }), 500
 
 
@@ -161,17 +159,12 @@ def start_scan():
     with open(os.path.join(scan_dir, 'status.json'), 'w') as f:
         json.dump(scan_status, f)
 
-    # Start scan in a separate thread
-    scan_thread = threading.Thread(
-        target=run_scan,
-        args=(domain, session_id, scan_dir)
-    )
-    scan_thread.daemon = True
-    scan_thread.start()
+    # Start scan as a Celery task
+    task = run_scan_task.delay(domain, session_id, current_app.config['RESULTS_DIR'])
 
-    # Store the thread for potential cancellation
+    # Store task information for potential cancellation
     active_scans[session_id] = {
-        'thread': scan_thread,
+        'task_id': task.id,
         'domain': domain,
         'status': scan_status
     }
@@ -307,6 +300,13 @@ def cancel_scan(session_id):
     if session_id not in active_scans:
         return jsonify({'error': 'Scan not found or already completed'}), 404
 
+    # Get the task ID
+    task_id = active_scans[session_id].get('task_id')
+    if task_id:
+        # Revoke the Celery task
+        from app import celery
+        celery.control.revoke(task_id, terminate=True)
+
     # Update status
     scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
     update_status(
@@ -322,6 +322,38 @@ def cancel_scan(session_id):
     del active_scans[session_id]
 
     return jsonify({'message': 'Scan cancelled successfully'})
+
+@main.route('/task-status/<task_id>')
+def task_status(task_id):
+    """Get the status of a Celery task."""
+    task_result = AsyncResult(task_id)
+
+    if task_result.state == 'PENDING':
+        response = {
+            'state': task_result.state,
+            'status': 'Pending...'
+        }
+    elif task_result.state == 'FAILURE':
+        response = {
+            'state': task_result.state,
+            'status': 'Failed',
+            'error': str(task_result.info)
+        }
+    elif task_result.state == 'SUCCESS':
+        response = {
+            'state': task_result.state,
+            'status': 'Completed',
+            'result': task_result.result
+        }
+    else:
+        # Task is in progress
+        response = {
+            'state': task_result.state,
+            'status': 'In progress...',
+            'info': task_result.info
+        }
+
+    return jsonify(response)
 
 @main.route('/scan.html')
 def scan_page():

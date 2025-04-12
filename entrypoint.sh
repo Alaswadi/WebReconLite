@@ -125,6 +125,15 @@ if command -v sublist3r > /dev/null 2>&1; then
     fi
 fi
 
-# Start Gunicorn
-echo "Starting Gunicorn..."
-exec gunicorn --bind 0.0.0.0:8001 --workers 4 --timeout 120 --log-level debug wsgi:app
+# Check the command argument
+if [ "$1" = "celery-worker" ]; then
+    echo "Starting Celery worker..."
+    exec celery -A app.celery worker --loglevel=info
+elif [ "$1" = "flower" ]; then
+    echo "Starting Flower monitoring..."
+    exec celery -A app.celery flower --port=5555
+else
+    # Default: Start Gunicorn
+    echo "Starting Gunicorn..."
+    exec gunicorn --bind 0.0.0.0:8001 --workers 4 --timeout 120 --log-level debug wsgi:app
+fi

@@ -13,6 +13,14 @@ print(f"Environment variables: {os.environ}")
 print("Importing Celery instance...")
 from celery_app import celery
 
+# Print Celery configuration
+print("Celery configuration:")
+print(f"Broker URL: {celery.conf.broker_url}")
+print(f"Result backend: {celery.conf.result_backend}")
+print(f"Task serializer: {celery.conf.task_serializer}")
+print(f"Result serializer: {celery.conf.result_serializer}")
+print(f"Accept content: {celery.conf.accept_content}")
+
 # Import Flask app
 print("Importing Flask app...")
 from app import create_app

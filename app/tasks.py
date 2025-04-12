@@ -26,9 +26,15 @@ def run_scan_task(self, domain, session_id, results_dir):
     print(f"Starting scan task for domain: {domain}, session_id: {session_id}")
     print(f"Task ID: {self.request.id}")
     print(f"Results directory: {results_dir}")
+    print(f"run_scan_task: Starting scan for domain {domain}, session_id {session_id}")
+    print(f"run_scan_task: Task ID: {self.request.id if hasattr(self.request, 'id') else None}")
+    print(f"run_scan_task: Results directory: {results_dir}")
+
     # Create a directory for this scan
     scan_dir = os.path.join(results_dir, session_id)
+    print(f"run_scan_task: Scan directory: {scan_dir}")
     os.makedirs(scan_dir, exist_ok=True)
+    print(f"run_scan_task: Created scan directory")
 
     # Create status file
     status_file = os.path.join(scan_dir, 'status.json')
@@ -62,10 +68,18 @@ def run_scan_task(self, domain, session_id, results_dir):
         update_status(status_file, progress=0, current_tool='Subdomain Enumeration')
 
         subdomains_file = os.path.join(scan_dir, 'subdomains.txt')
-        run_subdomain_enumeration(domain, subdomains_file)
+        print(f"run_scan_task: Subdomains file: {subdomains_file}")
+        print(f"run_scan_task: Starting subdomain enumeration for {domain}...")
 
-        # Parse subdomains
-        subdomains = parse_subdomains(subdomains_file)
+        # Call run_subdomain_enumeration with the correct parameters
+        # The function expects (domain, scan_dir, session_id, update_callback=None)
+        subdomains = run_subdomain_enumeration(domain, scan_dir, session_id)
+        print(f"run_scan_task: Subdomain enumeration completed")
+
+        # No need to parse subdomains, as run_subdomain_enumeration already returns them
+        if not subdomains:
+            # If no subdomains were found, parse the file as a fallback
+            subdomains = parse_subdomains(subdomains_file)
         update_status(status_file, progress=40, subdomains=subdomains)
 
         # Step 2: Web detection (30%)
@@ -80,10 +94,16 @@ def run_scan_task(self, domain, session_id, results_dir):
         update_status(status_file, progress=40, current_tool='Web Detection')
 
         httpx_file = os.path.join(scan_dir, 'httpx.txt')
-        run_web_detection(subdomains_file, httpx_file)
+        print(f"run_scan_task: Starting web detection...")
 
-        # Parse live hosts
-        live_hosts = parse_httpx_output(httpx_file)
+        # Call run_web_detection with the correct parameters
+        # The function expects (domain, subdomains, scan_dir, session_id, update_callback=None)
+        live_hosts, urls = run_web_detection(domain, subdomains, scan_dir, session_id)
+        print(f"run_scan_task: Web detection completed")
+
+        # If no live hosts were found, parse the file as a fallback
+        if not live_hosts:
+            live_hosts = parse_httpx_output(httpx_file)
         update_status(status_file, progress=70, live_hosts=live_hosts)
 
         # Step 3: URL discovery (30%)
@@ -97,11 +117,16 @@ def run_scan_task(self, domain, session_id, results_dir):
         # Always update the status file
         update_status(status_file, progress=70, current_tool='URL Discovery')
 
-        gau_file = os.path.join(scan_dir, 'gau.txt')
-        run_gau(domain, gau_file)
+        # We already have URLs from the web detection step
+        # But if they're empty, run gau separately
+        if not urls:
+            gau_file = os.path.join(scan_dir, 'gau.txt')
+            print(f"run_scan_task: Starting URL discovery...")
+            run_gau(domain, gau_file)
+            print(f"run_scan_task: URL discovery completed")
 
-        # Parse URLs
-        urls = parse_gau_output(gau_file)
+            # Parse URLs
+            urls = parse_gau_output(gau_file)
         update_status(status_file, progress=100, urls=urls, status='completed')
 
         # Final update

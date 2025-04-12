@@ -92,7 +92,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: webreconlite-test
-    command: ["python", "test_celery.py"]
+    command: ["python", "test_celery_task.py"]
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0

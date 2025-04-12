@@ -811,21 +811,50 @@ input[type="text"]:focus + .input-border {
     position: relative;
 }
 
-.gau-modal-content {
+.gau-modal-content, .naabu-modal-content {
     max-width: 800px;
     width: 90%;
 }
 
-.gau-status {
+.gau-status, .naabu-status {
     margin-bottom: 1.5rem;
     text-align: center;
 }
 
-.gau-results {
+.gau-results, .naabu-results {
     margin-top: 1.5rem;
 }
 
-.gau-filter {
+.port-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.port-host {
+    flex: 1;
+    font-weight: bold;
+}
+
+.port-number {
+    flex: 0 0 60px;
+    text-align: center;
+    background-color: rgba(0, 255, 255, 0.1);
+    color: var(--primary-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-family: monospace;
+}
+
+.port-url {
+    flex: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gau-filter, .naabu-filter {
     display: flex;
     justify-content: space-between;
     align-items: center;

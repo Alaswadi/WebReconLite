@@ -3,7 +3,7 @@
 echo "Checking tool availability:"
 
 # Count variables
-total_tools=6
+total_tools=7  # Updated to include naabu
 installed_tools=0
 
 # Function to check if a tool is installed
@@ -48,6 +48,12 @@ if check_tool gau; then
   echo "Checking gau version and flags:"
   gau -h 2>&1 | grep -E -- "-o|--o|-output|--output" || echo "  No output flag found in help"
   gau -version 2>&1 || gau --version 2>&1 || echo "  No version flag found"
+fi
+
+# Special check for naabu
+if check_tool naabu; then
+  echo "Checking naabu version:"
+  naabu -version 2>&1 || echo "  No version flag found"
 fi
 
 check_tool sublist3r

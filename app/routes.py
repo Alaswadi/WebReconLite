@@ -77,6 +77,58 @@ def run_gau_for_host():
             'error': f'Error running Gau: {str(e)}'
         }), 500
 
+@main.route('/run-naabu', methods=['POST'])
+def run_naabu_for_host():
+    """Run Naabu port scan for a specific host."""
+    from app.tools import run_naabu, parse_naabu_output
+
+    # Get the host URL from the request
+    data = request.get_json()
+    if not data or 'url' not in data:
+        return jsonify({'error': 'No URL provided'}), 400
+
+    url = data['url']
+    session_id = data.get('session_id')
+
+    if not session_id:
+        return jsonify({'error': 'No session ID provided'}), 400
+
+    # Create a directory for this scan if it doesn't exist
+    scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
+    if not os.path.exists(scan_dir):
+        return jsonify({'error': 'Invalid session ID'}), 404
+
+    # Extract domain from URL
+    from urllib.parse import urlparse
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc
+
+    if not domain:
+        return jsonify({'error': 'Invalid URL'}), 400
+
+    # Create a unique file for this host's Naabu results
+    host_naabu_file = os.path.join(scan_dir, f'naabu_{domain}.txt')
+
+    try:
+        # Run Naabu for this specific host
+        run_naabu(domain, host_naabu_file)
+
+        # Parse the results
+        open_ports = parse_naabu_output(host_naabu_file)
+
+        return jsonify({
+            'success': True,
+            'host': domain,
+            'port_count': len(open_ports),
+            'ports': open_ports
+        })
+    except Exception as e:
+        return jsonify({
+            'error': f'Error running Naabu: {str(e)}'
+        }), 500
+
+
+
 @main.route('/scan', methods=['POST'])
 def start_scan():
     """Start a new scan for the given domain."""

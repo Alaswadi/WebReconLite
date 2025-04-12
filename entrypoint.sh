@@ -77,6 +77,16 @@ if command -v gau > /dev/null 2>&1; then
     gau -h 2>&1 | grep -E -- "-o|--o|-output|--output" || echo "No output flag found in help"
 fi
 
+if command -v naabu > /dev/null 2>&1; then
+    echo "Testing naabu..."
+    echo "Checking naabu version:"
+    naabu -version || echo "naabu version check failed"
+
+    # Test naabu with a simple scan
+    echo "Testing naabu with a simple scan:"
+    naabu -host example.com -p 80 -silent || echo "naabu test scan failed"
+fi
+
 if command -v sublist3r > /dev/null 2>&1; then
     echo "Testing sublist3r..."
     echo "Checking Sublist3r installation:"

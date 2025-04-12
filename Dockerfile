@@ -94,6 +94,14 @@ RUN if [ -d "/app/Sublist3r" ]; then \
 COPY sublist3r-wrapper.sh /usr/local/bin/sublist3r
 RUN chmod +x /usr/local/bin/sublist3r
 
+# Install Naabu for port scanning
+RUN echo "Installing naabu..." && \
+    curl -L -o naabu.zip https://github.com/projectdiscovery/naabu/releases/download/v2.1.1/naabu_2.1.1_linux_amd64.zip && \
+    unzip -o naabu.zip -d /tmp && \
+    mv /tmp/naabu /usr/local/bin/ && \
+    chmod +x /usr/local/bin/naabu && \
+    rm naabu.zip || echo "Failed to install naabu"
+
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

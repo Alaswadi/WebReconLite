@@ -57,7 +57,7 @@ if command -v httpx > /dev/null 2>&1; then
 
     # Check available flags
     echo "Checking httpx available flags:"
-    httpx -h 2>&1 | grep -E -- "-tech|--tech" && echo "  -tech flag is available" || echo "  -tech flag is NOT available"
+    httpx -h 2>&1 | grep -E -- "-tech-detect|--tech-detect" && echo "  -tech-detect flag is available" || echo "  -tech-detect flag is NOT available"
 
     # Test with a simple domain
     echo "Testing httpx with example.com:"

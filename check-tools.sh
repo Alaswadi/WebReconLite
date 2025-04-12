@@ -45,7 +45,7 @@ fi
 if check_tool httpx; then
   echo "Checking httpx version and flags:"
   httpx -version 2>&1 || echo "  No version flag found"
-  httpx -h 2>&1 | grep -E -- "-tech|--tech" && echo "  -tech flag is available" || echo "  -tech flag is NOT available"
+  httpx -h 2>&1 | grep -E -- "-tech-detect|--tech-detect" && echo "  -tech-detect flag is available" || echo "  -tech-detect flag is NOT available"
 fi
 
 # Special check for gau with version info

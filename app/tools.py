@@ -123,7 +123,7 @@ def run_httpx(subdomains_file, output_file):
     # Try different command formats for different httpx versions
     try:
         # First try with newer flags including technology detection
-        command = f"httpx -l {subdomains_file} -silent -title -status-code -tech -no-color -o {output_file}"
+        command = f"httpx -l {subdomains_file} -silent -title -status-code -tech-detect -no-color -o {output_file}"
         result = run_tool("Httpx", command)
 
         # Check if the output file was created and has content

@@ -686,6 +686,19 @@ input[type="text"]:focus + .input-border {
     font-size: 0.9rem;
 }
 
+.host-tech {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    font-family: monospace;
+    background-color: rgba(0, 255, 255, 0.05);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+}
+
 .host-actions {
     flex: 0 0 60px;
     text-align: center;

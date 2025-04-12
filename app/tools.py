@@ -120,7 +120,8 @@ def run_sublist3r(domain, output_file):
 
 def run_httpx(subdomains_file, output_file):
     """Run Httpx for web detection."""
-    command = f"httpx -l {subdomains_file} -silent -title -status-code -no-color -o {output_file}"
+    # Include tech detection with -tech flag
+    command = f"httpx -l {subdomains_file} -silent -title -status-code -tech -no-color -o {output_file}"
     return run_tool("Httpx", command)
 
 def run_gau(domain, output_file):
@@ -303,6 +304,14 @@ def parse_httpx_output(file_path):
                 if title_end > title_start:
                     title = parts[1][title_start:title_end].strip()
 
+            # Extract technology
+            tech = "Unknown"
+            tech_start = parts[1].find('[', title_start + len(title) + 1) if title_start > 0 else -1
+            if tech_start > 0:
+                tech_end = parts[1].find(']', tech_start)
+                if tech_end > tech_start:
+                    tech = parts[1][tech_start+1:tech_end].strip()
+
             # Clean up status code (remove any remaining color codes or spaces)
             status_code = re.sub(r'[^0-9]', '', status_code) or "Unknown"
 
@@ -323,7 +332,8 @@ def parse_httpx_output(file_path):
                 'url': url,
                 'status_code': status_code,
                 'status_class': status_class,
-                'title': title
+                'title': title,
+                'technology': tech
             })
 
     return live_hosts

@@ -269,7 +269,7 @@ def get_status(session_id):
         # Check if there's an active task for this scan
         if session_id in active_scans and 'task_id' in active_scans[session_id]:
             task_id = active_scans[session_id]['task_id']
-            task_result = AsyncResult(task_id)
+            task_result = AsyncResult(task_id, app=celery)
 
             # Update status based on task state
             if task_result.state == 'PENDING':

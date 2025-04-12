@@ -161,14 +161,29 @@ def start_scan():
         json.dump(scan_status, f)
 
     # Start scan as a Celery task
-    task = run_scan_task.delay(domain, session_id, current_app.config['RESULTS_DIR'])
+    print(f"Starting scan task for domain: {domain}, session_id: {session_id}")
+    try:
+        # Try to run the task synchronously for debugging
+        print("Running task synchronously for debugging...")
+        result = run_scan_task(domain, session_id, current_app.config['RESULTS_DIR'])
+        print(f"Synchronous task result: {result}")
 
-    # Store task information for potential cancellation
-    active_scans[session_id] = {
-        'task_id': task.id,
-        'domain': domain,
-        'status': scan_status
-    }
+        # Now try to run it asynchronously
+        print("Running task asynchronously...")
+        task = run_scan_task.delay(domain, session_id, current_app.config['RESULTS_DIR'])
+        print(f"Task ID: {task.id}")
+
+        # Store task information for potential cancellation
+        active_scans[session_id] = {
+            'task_id': task.id,
+            'domain': domain,
+            'status': scan_status
+        }
+    except Exception as e:
+        print(f"Error starting scan task: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Error starting scan: {str(e)}'}), 500
 
     return jsonify({
         'session_id': session_id,

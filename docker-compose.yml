@@ -87,6 +87,36 @@ services:
       timeout: 10s
       retries: 3
 
+  celery-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webreconlite-test
+    command: ["python", "test_celery.py"]
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - C_FORCE_ROOT=true
+    networks:
+      - webreconlite-network
+    depends_on:
+      - redis
+      - celery-worker
+
+  redis-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webreconlite-redis-test
+    command: ["python", "test_redis.py"]
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - webreconlite-network
+    depends_on:
+      - redis
+
 networks:
   webreconlite-network:
     driver: bridge

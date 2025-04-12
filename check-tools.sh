@@ -41,7 +41,12 @@ else
   echo "chaos: ❌ Not configured (PDCP_API_KEY not set)"
 fi
 
-check_tool httpx
+# Special check for httpx with version and flag info
+if check_tool httpx; then
+  echo "Checking httpx version and flags:"
+  httpx -version 2>&1 || echo "  No version flag found"
+  httpx -h 2>&1 | grep -E -- "-tech|--tech" && echo "  -tech flag is available" || echo "  -tech flag is NOT available"
+fi
 
 # Special check for gau with version info
 if check_tool gau; then

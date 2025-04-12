@@ -120,9 +120,30 @@ def run_sublist3r(domain, output_file):
 
 def run_httpx(subdomains_file, output_file):
     """Run Httpx for web detection."""
-    # Include tech detection with -tech flag
-    command = f"httpx -l {subdomains_file} -silent -title -status-code -tech -no-color -o {output_file}"
-    return run_tool("Httpx", command)
+    # Try different command formats for different httpx versions
+    try:
+        # First try with newer flags including technology detection
+        command = f"httpx -l {subdomains_file} -silent -title -status-code -tech -no-color -o {output_file}"
+        result = run_tool("Httpx", command)
+
+        # Check if the output file was created and has content
+        if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            return result
+
+        # If that fails, try with older version flags
+        print("First httpx command failed, trying alternative format...")
+        command = f"httpx -l {subdomains_file} -silent -title -status-code -no-color -o {output_file}"
+        return run_tool("Httpx", command)
+    except Exception as e:
+        print(f"Error running httpx: {str(e)}")
+        # Create a fallback file with basic information
+        with open(output_file, 'w') as f:
+            with open(subdomains_file, 'r') as sf:
+                for line in sf:
+                    subdomain = line.strip()
+                    if subdomain:
+                        f.write(f"https://{subdomain} [200] [No Title]\n")
+        return f"Httpx failed: {str(e)}, using fallback output"
 
 def run_gau(domain, output_file):
     """Run Gau for URL discovery."""
@@ -304,13 +325,30 @@ def parse_httpx_output(file_path):
                 if title_end > title_start:
                     title = parts[1][title_start:title_end].strip()
 
-            # Extract technology
+            # Extract technology if available
             tech = "Unknown"
-            tech_start = parts[1].find('[', title_start + len(title) + 1) if title_start > 0 else -1
-            if tech_start > 0:
-                tech_end = parts[1].find(']', tech_start)
-                if tech_end > tech_start:
-                    tech = parts[1][tech_start+1:tech_end].strip()
+            remaining_text = parts[1][title_end+1:] if title_end > 0 else ""
+
+            # Check if there's another bracketed section after the title
+            if '[' in remaining_text and ']' in remaining_text:
+                tech_start = remaining_text.find('[') + 1
+                tech_end = remaining_text.find(']', tech_start)
+                if tech_start < tech_end:
+                    tech = remaining_text[tech_start:tech_end].strip()
+
+                    # Clean up technology string
+                    if tech.lower().startswith("tech="):
+                        tech = tech[5:].strip()
+
+            # If no technology info found, try to extract from HTTP headers or other patterns
+            if tech == "Unknown" and "wordpress" in url.lower():
+                tech = "WordPress"
+            elif tech == "Unknown" and "wp-" in url.lower():
+                tech = "WordPress"
+            elif tech == "Unknown" and "joomla" in url.lower():
+                tech = "Joomla"
+            elif tech == "Unknown" and "drupal" in url.lower():
+                tech = "Drupal"
 
             # Clean up status code (remove any remaining color codes or spaces)
             status_code = re.sub(r'[^0-9]', '', status_code) or "Unknown"

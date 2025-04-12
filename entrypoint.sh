@@ -54,6 +54,14 @@ fi
 if command -v httpx > /dev/null 2>&1; then
     echo "Testing httpx..."
     httpx -version || echo "httpx version check failed"
+
+    # Check available flags
+    echo "Checking httpx available flags:"
+    httpx -h 2>&1 | grep -E -- "-tech|--tech" && echo "  -tech flag is available" || echo "  -tech flag is NOT available"
+
+    # Test with a simple domain
+    echo "Testing httpx with example.com:"
+    httpx -u example.com -silent || echo "httpx test failed"
 fi
 
 if command -v chaos > /dev/null 2>&1; then

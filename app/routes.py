@@ -163,12 +163,7 @@ def start_scan():
     # Start scan as a Celery task
     print(f"Starting scan task for domain: {domain}, session_id: {session_id}")
     try:
-        # Try to run the task synchronously for debugging
-        print("Running task synchronously for debugging...")
-        result = run_scan_task(domain, session_id, current_app.config['RESULTS_DIR'])
-        print(f"Synchronous task result: {result}")
-
-        # Now try to run it asynchronously
+        # Run the task asynchronously
         print("Running task asynchronously...")
         task = run_scan_task.delay(domain, session_id, current_app.config['RESULTS_DIR'])
         print(f"Task ID: {task.id}")

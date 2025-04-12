@@ -51,7 +51,14 @@ def run_scan_task(self, domain, session_id, results_dir):
 
     try:
         # Step 1: Subdomain enumeration (40%)
-        self.update_state(state='PROGRESS', meta={'progress': 0, 'current_tool': 'Subdomain Enumeration'})
+        try:
+            # Only update state if running asynchronously (has task_id)
+            if self.request.id:
+                self.update_state(state='PROGRESS', meta={'progress': 0, 'current_tool': 'Subdomain Enumeration'})
+        except Exception as e:
+            print(f"Warning: Could not update task state: {str(e)}")
+
+        # Always update the status file
         update_status(status_file, progress=0, current_tool='Subdomain Enumeration')
 
         subdomains_file = os.path.join(scan_dir, 'subdomains.txt')
@@ -62,7 +69,14 @@ def run_scan_task(self, domain, session_id, results_dir):
         update_status(status_file, progress=40, subdomains=subdomains)
 
         # Step 2: Web detection (30%)
-        self.update_state(state='PROGRESS', meta={'progress': 40, 'current_tool': 'Web Detection'})
+        try:
+            # Only update state if running asynchronously (has task_id)
+            if self.request.id:
+                self.update_state(state='PROGRESS', meta={'progress': 40, 'current_tool': 'Web Detection'})
+        except Exception as e:
+            print(f"Warning: Could not update task state: {str(e)}")
+
+        # Always update the status file
         update_status(status_file, progress=40, current_tool='Web Detection')
 
         httpx_file = os.path.join(scan_dir, 'httpx.txt')
@@ -73,7 +87,14 @@ def run_scan_task(self, domain, session_id, results_dir):
         update_status(status_file, progress=70, live_hosts=live_hosts)
 
         # Step 3: URL discovery (30%)
-        self.update_state(state='PROGRESS', meta={'progress': 70, 'current_tool': 'URL Discovery'})
+        try:
+            # Only update state if running asynchronously (has task_id)
+            if self.request.id:
+                self.update_state(state='PROGRESS', meta={'progress': 70, 'current_tool': 'URL Discovery'})
+        except Exception as e:
+            print(f"Warning: Could not update task state: {str(e)}")
+
+        # Always update the status file
         update_status(status_file, progress=70, current_tool='URL Discovery')
 
         gau_file = os.path.join(scan_dir, 'gau.txt')
@@ -84,7 +105,12 @@ def run_scan_task(self, domain, session_id, results_dir):
         update_status(status_file, progress=100, urls=urls, status='completed')
 
         # Final update
-        self.update_state(state='SUCCESS', meta={'progress': 100, 'current_tool': 'Completed'})
+        try:
+            # Only update state if running asynchronously (has task_id)
+            if self.request.id:
+                self.update_state(state='SUCCESS', meta={'progress': 100, 'current_tool': 'Completed'})
+        except Exception as e:
+            print(f"Warning: Could not update task state: {str(e)}")
 
         return {
             'domain': domain,
@@ -101,7 +127,12 @@ def run_scan_task(self, domain, session_id, results_dir):
         update_status(status_file, status='error', errors=[error_msg])
 
         # Update Celery task state
-        self.update_state(state='FAILURE', meta={'error': error_msg})
+        try:
+            # Only update state if running asynchronously (has task_id)
+            if self.request.id:
+                self.update_state(state='FAILURE', meta={'error': error_msg})
+        except Exception as e:
+            print(f"Warning: Could not update task state: {str(e)}")
 
         # Re-raise the exception
         raise

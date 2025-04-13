@@ -125,6 +125,10 @@ if command -v sublist3r > /dev/null 2>&1; then
     fi
 fi
 
+# Run the check-tools script to verify all tools are installed
+echo "Checking installed tools..."
+/usr/local/bin/check-tools.sh
+
 # Start Gunicorn
 echo "Starting Gunicorn..."
 exec gunicorn --bind 0.0.0.0:8001 --workers 4 --timeout 120 --log-level debug wsgi:app

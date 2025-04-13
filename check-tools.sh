@@ -3,7 +3,7 @@
 echo "Checking tool availability:"
 
 # Count variables
-total_tools=7  # Updated to include naabu
+total_tools=8  # Updated to include naabu and nmap
 installed_tools=0
 
 # Function to check if a tool is installed
@@ -59,6 +59,14 @@ fi
 if check_tool naabu; then
   echo "Checking naabu version:"
   naabu -version 2>&1 || echo "  No version flag found"
+  echo "Testing naabu with a quick scan:"
+  naabu -host example.com -p 80,443 -silent || echo "  Naabu test failed"
+fi
+
+# Special check for nmap
+if check_tool nmap; then
+  echo "Checking nmap version:"
+  nmap --version | head -n 1 || echo "  No version flag found"
 fi
 
 check_tool sublist3r

@@ -218,46 +218,96 @@ def run_gau(domain, output_file):
 
 def run_naabu(host, output_file):
     """Run Naabu for port scanning."""
-    # Common web ports to scan
-    web_ports = "80,81,443,3000,8000,8001,8080,8443,8888"
+    # Expanded port range to scan
+    # Include common web ports, mail ports, database ports, and other common services
+    port_ranges = "1-1000,1433,1521,1723,2049,2375,2376,3000,3306,3389,5432,5900,5901,6379,8000-8999,9000-9999,27017,27018,27019"
+
+    print(f"Running Naabu port scan on {host} with port ranges: {port_ranges}")
 
     try:
-        # Run naabu with specified web ports
-        command = f"naabu -host {host} -p {web_ports} -silent -o {output_file}"
+        # First try with top ports flag for faster scanning
+        command = f"naabu -host {host} -top-ports 1000 -silent -o {output_file}"
+        print(f"Executing command: {command}")
         result = run_tool("Naabu", command)
 
         # Check if the output file was created and has content
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"Naabu scan completed successfully with top-ports flag")
             return result
 
-        # If the file is empty or doesn't exist, try with different flags
-        print("Trying alternative naabu command formats...")
+        # If that fails, try with specific port ranges
+        print("Top ports scan failed, trying with specific port ranges...")
+        command = f"naabu -host {host} -p {port_ranges} -silent -o {output_file}"
+        print(f"Executing command: {command}")
+        result = run_tool("Naabu", command)
+
+        # Check if the output file was created and has content
+        if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"Naabu scan completed successfully with port ranges")
+            return result
 
         # Try with different output flag
-        command = f"naabu -host {host} -p {web_ports} -silent -output {output_file}"
+        print("Trying alternative naabu command format...")
+        command = f"naabu -host {host} -p {port_ranges} -silent -output {output_file}"
+        print(f"Executing command: {command}")
         result = run_tool("Naabu", command)
 
         # Check again
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"Naabu scan completed successfully with alternative command")
             return result
 
+        # Try with nmap fallback if naabu is failing
+        if shutil.which('nmap'):
+            print("Trying nmap as fallback...")
+            command = f"nmap -p 1-1000 {host} -oN {output_file}"
+            print(f"Executing command: {command}")
+            result = run_tool("Nmap", command)
+
+            # Parse nmap output and convert to naabu format
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                # Parse nmap output and convert to naabu format
+                with open(output_file, 'r') as f:
+                    nmap_output = f.read()
+
+                # Extract open ports from nmap output
+                open_ports = []
+                for line in nmap_output.splitlines():
+                    if 'open' in line and 'tcp' in line:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            port = parts[0].split('/')[0]
+                            open_ports.append(port)
+
+                # Write ports in naabu format
+                with open(output_file, 'w') as f:
+                    for port in open_ports:
+                        f.write(f"{host}:{port}\n")
+
+                print(f"Nmap scan completed, found {len(open_ports)} open ports")
+                return "Used nmap as fallback for port scanning"
+
         # If all else fails, create a dummy file with common ports
+        print("All port scanning methods failed, using fallback ports")
         with open(output_file, 'w') as f:
             f.write(f"{host}:80\n")
             f.write(f"{host}:443\n")
             f.write(f"{host}:8080\n")
 
-        return "Naabu failed, using fallback ports"
+        return "Naabu and nmap failed, using fallback ports"
 
     except Exception as e:
-        print(f"Error running naabu: {str(e)}")
+        print(f"Error running port scan: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
         # Create a dummy file with common ports
         with open(output_file, 'w') as f:
             f.write(f"{host}:80\n")
             f.write(f"{host}:443\n")
             f.write(f"{host}:8080\n")
 
-        return f"Naabu failed: {str(e)}, using fallback ports"
+        return f"Port scanning failed: {str(e)}, using fallback ports"
 
 def parse_naabu_output(file_path):
     """Parse Naabu output to extract open ports."""

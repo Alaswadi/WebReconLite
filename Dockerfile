@@ -100,11 +100,20 @@ RUN echo "Installing naabu..." && \
     unzip -o naabu.zip -d /tmp && \
     mv /tmp/naabu /usr/local/bin/ && \
     chmod +x /usr/local/bin/naabu && \
-    rm naabu.zip || echo "Failed to install naabu"
+    rm naabu.zip && \
+    echo "Naabu installed successfully at $(which naabu)"
+
+# Install nmap as a fallback for port scanning
+RUN apt-get update && apt-get install -y nmap && \
+    echo "nmap installed successfully at $(which nmap)"
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy check-tools script
+COPY check-tools.sh /usr/local/bin/check-tools.sh
+RUN chmod +x /usr/local/bin/check-tools.sh
 
 # Copy application code
 COPY . .

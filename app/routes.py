@@ -63,19 +63,26 @@ def run_gau_for_host():
     host_gau_file = os.path.join(scan_dir, f'gau_{domain}.txt')
 
     try:
-        # Run Gau as a Celery task
-        task = run_gau_task.delay(domain, host_gau_file)
+        # Run Gau directly
+        print(f"Running GAU for {domain}...")
+        from app.tools import run_gau, parse_gau_output
+        run_gau(domain, host_gau_file)
+        urls = parse_gau_output(host_gau_file)
+        print(f"GAU completed for {domain}, found {len(urls)} URLs")
 
-        # Return task ID for polling
+        # Return results directly
         return jsonify({
             'success': True,
             'host': domain,
-            'task_id': task.id,
-            'status': 'processing'
+            'url_count': len(urls),
+            'urls': urls[:100]  # Limit to first 100 URLs
         })
     except Exception as e:
+        print(f"Error running GAU: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
-            'error': f'Error starting Gau task: {str(e)}'
+            'error': f'Error running GAU: {str(e)}'
         }), 500
 
 @main.route('/run-naabu', methods=['POST'])
@@ -111,19 +118,26 @@ def run_naabu_for_host():
     host_naabu_file = os.path.join(scan_dir, f'naabu_{domain}.txt')
 
     try:
-        # Run Naabu as a Celery task
-        task = run_naabu_task.delay(domain, host_naabu_file)
+        # Run Naabu directly
+        print(f"Running Naabu for {domain}...")
+        from app.tools import run_naabu, parse_naabu_output
+        run_naabu(domain, host_naabu_file)
+        ports = parse_naabu_output(host_naabu_file)
+        print(f"Naabu completed for {domain}, found {len(ports)} open ports")
 
-        # Return task ID for polling
+        # Return results directly
         return jsonify({
             'success': True,
             'host': domain,
-            'task_id': task.id,
-            'status': 'processing'
+            'port_count': len(ports),
+            'ports': ports
         })
     except Exception as e:
+        print(f"Error running Naabu: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
-            'error': f'Error starting Naabu task: {str(e)}'
+            'error': f'Error running Naabu: {str(e)}'
         }), 500
 
 

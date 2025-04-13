@@ -26,10 +26,14 @@ def get_tool_status():
 
 def run_tool(tool_name, command, output_file=None, timeout=300):
     """Run a command-line tool and capture its output."""
+    print(f"run_tool: Running {tool_name} with command: {command}")
+    if output_file:
+        print(f"run_tool: Output will be saved to: {output_file}")
+
     # Check if the tool is installed
     tool_cmd = command.split()[0]
     if not check_tool_installed(tool_cmd) and tool_cmd not in ['python', 'python3']:
-        print(f"Warning: {tool_cmd} not found in PATH")
+        print(f"run_tool: Warning: {tool_cmd} not found in PATH")
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(f"# Tool {tool_cmd} not installed or not found in PATH\n")
@@ -37,6 +41,7 @@ def run_tool(tool_name, command, output_file=None, timeout=300):
 
     try:
         # Start the process
+        print(f"run_tool: Starting process for {tool_name}")
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE if output_file else None,
@@ -45,9 +50,12 @@ def run_tool(tool_name, command, output_file=None, timeout=300):
             shell=True,
             env=os.environ.copy()  # Pass current environment variables to the subprocess
         )
+        print(f"run_tool: Process started with PID: {process.pid}")
 
         # Wait for the process to complete with timeout
+        print(f"run_tool: Waiting for process to complete (timeout: {timeout}s)")
         stdout, stderr = process.communicate(timeout=timeout)
+        print(f"run_tool: Process completed with return code: {process.returncode}")
 
         # Check if the process was successful
         if process.returncode != 0:
@@ -380,11 +388,16 @@ def parse_gau_output(file_path):
 
 def run_subdomain_enumeration(domain, scan_dir, session_id, update_callback=None):
     """Run all subdomain enumeration tools concurrently."""
+    print(f"run_subdomain_enumeration: Starting for domain {domain}, session_id {session_id}")
+    print(f"run_subdomain_enumeration: Scan directory: {scan_dir}")
+
     # Create output files
     subfinder_file = os.path.join(scan_dir, 'subfinder.txt')
     assetfinder_file = os.path.join(scan_dir, 'assetfinder.txt')
     chaos_file = os.path.join(scan_dir, 'chaos.txt')
     sublist3r_file = os.path.join(scan_dir, 'sublist3r.txt')
+
+    print(f"run_subdomain_enumeration: Output files created")
 
     # Store results
     results = {

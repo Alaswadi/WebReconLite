@@ -160,22 +160,27 @@ def start_scan():
     with open(os.path.join(scan_dir, 'status.json'), 'w') as f:
         json.dump(scan_status, f)
 
-    # Start scan as a Celery task
-    print(f"Starting scan task for domain: {domain}, session_id: {session_id}")
+    # Start scan directly (synchronously) for debugging
+    print(f"Starting scan for domain: {domain}, session_id: {session_id}")
     try:
-        # Run the task asynchronously
-        print("Running task asynchronously...")
-        task = run_scan_task.delay(domain, session_id, current_app.config['RESULTS_DIR'])
-        print(f"Task ID: {task.id}")
+        # Start a thread to run the scan
+        print("Running scan in a separate thread...")
+        scan_thread = threading.Thread(
+            target=run_scan,
+            args=(domain, session_id, scan_dir)
+        )
+        scan_thread.daemon = True
+        scan_thread.start()
+        print(f"Scan thread started")
 
-        # Store task information for potential cancellation
+        # Store scan information
         active_scans[session_id] = {
-            'task_id': task.id,
+            'thread': scan_thread,
             'domain': domain,
             'status': scan_status
         }
     except Exception as e:
-        print(f"Error starting scan task: {str(e)}")
+        print(f"Error starting scan: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Error starting scan: {str(e)}'}), 500
@@ -188,20 +193,30 @@ def start_scan():
 
 def run_scan(domain, session_id, scan_dir):
     """Run the full scan process."""
+    print(f"run_scan: Starting scan for domain {domain}, session_id {session_id}")
+    print(f"run_scan: Scan directory: {scan_dir}")
+
     try:
         # Update status
+        print(f"run_scan: Updating status to 'running'")
         update_status(session_id, scan_dir, status='running', progress=5, current_tool='Subdomain Enumeration')
 
         # Run subdomain enumeration
+        print(f"run_scan: Starting subdomain enumeration")
         subdomains = run_subdomain_enumeration(domain, scan_dir, session_id, update_callback=lambda p, t: update_status(session_id, scan_dir, progress=p, current_tool=t))
+        print(f"run_scan: Subdomain enumeration completed, found {len(subdomains)} subdomains")
 
         # Update status with subdomains
+        print(f"run_scan: Updating status with subdomains")
         update_status(session_id, scan_dir, progress=50, current_tool='Web Detection', subdomains=subdomains)
 
         # Run web detection
+        print(f"run_scan: Starting web detection")
         live_hosts, urls = run_web_detection(domain, subdomains, scan_dir, session_id, update_callback=lambda p, t: update_status(session_id, scan_dir, progress=p, current_tool=t))
+        print(f"run_scan: Web detection completed, found {len(live_hosts)} live hosts and {len(urls)} URLs")
 
         # Update final status
+        print(f"run_scan: Updating status to 'completed'")
         update_status(
             session_id,
             scan_dir,
@@ -211,9 +226,16 @@ def run_scan(domain, session_id, scan_dir):
             live_hosts=live_hosts,
             urls=urls
         )
+        print(f"run_scan: Scan completed successfully")
 
     except Exception as e:
+        # Print the error
+        print(f"run_scan: Error during scan: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
         # Update status with error
+        print(f"run_scan: Updating status to 'error'")
         update_status(
             session_id,
             scan_dir,
@@ -225,6 +247,7 @@ def run_scan(domain, session_id, scan_dir):
     finally:
         # Remove from active scans
         if session_id in active_scans:
+            print(f"run_scan: Removing session {session_id} from active scans")
             del active_scans[session_id]
 
 def update_status(session_id, scan_dir, status=None, progress=None, current_tool=None, subdomains=None, live_hosts=None, urls=None, errors=None):

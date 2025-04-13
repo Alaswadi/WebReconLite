@@ -215,7 +215,7 @@ def run_scan(domain, session_id, scan_dir):
         live_hosts, urls = run_web_detection(domain, subdomains, scan_dir, session_id, update_callback=lambda p, t: update_status(session_id, scan_dir, progress=p, current_tool=t))
         print(f"run_scan: Web detection completed, found {len(live_hosts)} live hosts and {len(urls)} URLs")
 
-        # Update final status
+        # Update final status - URLs will be added later when GAU is run manually
         print(f"run_scan: Updating status to 'completed'")
         update_status(
             session_id,
@@ -223,10 +223,9 @@ def run_scan(domain, session_id, scan_dir):
             status='completed',
             progress=100,
             current_tool='Completed',
-            live_hosts=live_hosts,
-            urls=urls
+            live_hosts=live_hosts
         )
-        print(f"run_scan: Scan completed successfully")
+        print(f"run_scan: Scan completed successfully - GAU and port scanning can be triggered manually")
 
     except Exception as e:
         # Print the error

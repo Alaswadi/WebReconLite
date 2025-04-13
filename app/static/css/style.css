@@ -428,6 +428,20 @@ input[type="text"]:focus + .input-border {
     padding: 2rem 0;
 }
 
+.info-message {
+    background-color: rgba(0, 255, 255, 0.1);
+    border-left: 3px solid var(--info-color);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: var(--border-radius);
+}
+
+.info-message p {
+    color: var(--text-color);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
 .scan-header {
     margin-bottom: 2rem;
     text-align: center;

@@ -61,8 +61,11 @@
                         <span id="urls-count" class="count-badge">0</span>
                     </div>
                 </div>
+                <div class="info-message">
+                    <p><strong>Note:</strong> URL discovery with GAU is not run automatically. Click the "Gau" button next to any live host to discover URLs for that specific host.</p>
+                </div>
                 <div class="results-list" id="urls-list">
-                    <p class="loading-text">Waiting for results...</p>
+                    <p class="loading-text">No URLs found. Use the "Gau" button next to any live host to discover URLs.</p>
                 </div>
             </div>
         </div>
@@ -271,8 +274,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="host-status ${statusClass}">${host.status_code}</div>
                     <div class="host-tech">${host.technology || 'Unknown'}</div>
                     <div class="host-actions">
-                        <button class="btn btn-small btn-secondary run-gau-btn" data-url="${host.url}" data-session="${sessionId}">Gau</button>
-                        <button class="btn btn-small btn-primary run-naabu-btn" data-url="${host.url}" data-session="${sessionId}">Ports</button>
+                        <button class="btn btn-small btn-secondary run-gau-btn" data-url="${host.url}" data-session="${sessionId}" title="Run GAU to discover URLs for this host">Discover URLs</button>
+                        <button class="btn btn-small btn-primary run-naabu-btn" data-url="${host.url}" data-session="${sessionId}" title="Run Naabu to scan ports for this host">Scan Ports</button>
                     </div>
                 </li>
             `;
@@ -284,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderUrls(urls) {
         if (!urls || urls.length === 0) {
-            urlsList.innerHTML = '<p class="no-results">No URLs found yet.</p>';
+            urlsList.innerHTML = '<p class="no-results">No URLs found yet. Use the "Discover URLs" button next to any live host to run GAU and discover URLs.</p>';
             urlsCount.textContent = '0';
             return;
         }

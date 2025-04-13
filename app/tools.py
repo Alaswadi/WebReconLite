@@ -542,74 +542,16 @@ def run_web_detection(domain, subdomains, scan_dir, session_id, update_callback=
             for host in live_hosts:
                 f.write(f"{host['url']} [{host['status_code']}] [{host['title']}]\n")
 
-    # Run Gau if installed
-    if tool_status.get('gau', False):
-        try:
-            if update_callback:
-                update_callback(85, "Running Gau")
+    # Don't run GAU automatically - it will be triggered manually by the user
+    print("Skipping GAU - will be triggered manually by the user")
+    if update_callback:
+        update_callback(95, "Skipping GAU - will be triggered manually by the user")
 
-            # Run Gau with enhanced error handling
-            result = run_gau(domain, gau_file)
+    # Create empty URLs list
+    urls = []
 
-            # Check if the output file exists and has content
-            if os.path.exists(gau_file) and os.path.getsize(gau_file) > 0:
-                urls = parse_gau_output(gau_file)
-                if update_callback:
-                    update_callback(95, "Completed Gau")
-            else:
-                # If the file is empty or doesn't exist, create dummy URLs
-                print("Gau output file is empty or doesn't exist, using fallback URLs")
-                urls = [
-                    f"https://{domain}/index.html",
-                    f"https://{domain}/about",
-                    f"https://{domain}/contact",
-                    f"https://{domain}/login",
-                    f"https://{domain}/api/v1/users"
-                ]
-
-                # Save dummy results
-                with open(gau_file, 'w') as f:
-                    for url in urls:
-                        f.write(f"{url}\n")
-
-                if update_callback:
-                    update_callback(95, "Gau failed, using fallback URLs")
-
-        except Exception as e:
-            print(f"Error in run_web_detection when running Gau: {str(e)}")
-            if update_callback:
-                update_callback(95, f"Gau failed: {str(e)}")
-
-            # Create dummy URLs
-            urls = [
-                f"https://{domain}/index.html",
-                f"https://{domain}/about",
-                f"https://{domain}/contact",
-                f"https://{domain}/login",
-                f"https://{domain}/api/v1/users"
-            ]
-
-            # Save dummy results
-            with open(gau_file, 'w') as f:
-                for url in urls:
-                    f.write(f"{url}\n")
-    else:
-        print("Gau not installed, using fallback")
-        if update_callback:
-            update_callback(95, "Gau not installed, using fallback")
-
-        # Create dummy URLs for testing
-        urls = [
-            f"https://{domain}/login",
-            f"https://{domain}/admin",
-            f"https://{domain}/api/v1/users",
-            f"https://www.{domain}/products",
-            f"https://api.{domain}/docs"
-        ]
-
-        # Save dummy results
-        with open(gau_file, 'w') as f:
-            for url in urls:
-                f.write(f"{url}\n")
+    # Create an empty GAU file as a placeholder
+    with open(gau_file, 'w') as f:
+        f.write(f"# GAU will be run manually by the user\n")
 
     return live_hosts, urls

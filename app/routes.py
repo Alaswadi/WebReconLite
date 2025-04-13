@@ -70,6 +70,24 @@ def run_gau_for_host():
         urls = parse_gau_output(host_gau_file)
         print(f"GAU completed for {domain}, found {len(urls)} URLs")
 
+        # Update the scan status file with the URLs
+        status_file = os.path.join(scan_dir, 'status.json')
+        if os.path.exists(status_file):
+            try:
+                with open(status_file, 'r') as f:
+                    scan_status = json.load(f)
+
+                # Update the URLs in the status file
+                scan_status['urls'] = urls
+
+                # Save the updated status
+                with open(status_file, 'w') as f:
+                    json.dump(scan_status, f)
+
+                print(f"Updated status file with {len(urls)} URLs")
+            except Exception as e:
+                print(f"Error updating status file: {str(e)}")
+
         # Return results directly
         return jsonify({
             'success': True,
@@ -124,6 +142,28 @@ def run_naabu_for_host():
         run_naabu(domain, host_naabu_file)
         ports = parse_naabu_output(host_naabu_file)
         print(f"Naabu completed for {domain}, found {len(ports)} open ports")
+
+        # Update the scan status file with the ports
+        status_file = os.path.join(scan_dir, 'status.json')
+        if os.path.exists(status_file):
+            try:
+                with open(status_file, 'r') as f:
+                    scan_status = json.load(f)
+
+                # Update the ports in the status file
+                if 'ports' not in scan_status:
+                    scan_status['ports'] = {}
+
+                # Add ports for this domain
+                scan_status['ports'][domain] = ports
+
+                # Save the updated status
+                with open(status_file, 'w') as f:
+                    json.dump(scan_status, f)
+
+                print(f"Updated status file with {len(ports)} ports for {domain}")
+            except Exception as e:
+                print(f"Error updating status file: {str(e)}")
 
         # Return results directly
         return jsonify({

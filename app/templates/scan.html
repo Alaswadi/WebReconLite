@@ -463,8 +463,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Also update the main URLs tab
                 renderUrls(data.urls);
 
-                // Update the session data
-                updateSessionData();
+                // Update the URLs count
+                const urlsCount = document.getElementById('urls-count');
+                urlsCount.textContent = data.url_count;
             }
         })
         .catch(error => {
@@ -476,6 +477,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // We're not using polling anymore since we're running tasks synchronously
+
+    // Function to update session data
+    function updateSessionData() {
+        // Fetch the latest scan status
+        fetch(`/status/${sessionId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update the UI with the latest data
+                if (data.live_hosts) {
+                    renderLiveHosts(data.live_hosts);
+                }
+                if (data.urls) {
+                    renderUrls(data.urls);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating session data:', error);
+            });
+    }
 
     // Function to set up Gau filtering
     function setupGauFiltering(urls) {
@@ -581,8 +601,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Set up filtering
                 setupNaabuFiltering(data.ports);
 
-                // Update the session data
-                updateSessionData();
+                // No need to update session data here
             }
         })
         .catch(error => {

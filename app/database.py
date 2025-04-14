@@ -377,11 +377,11 @@ def add_nuclei_result(subdomain_id, vulnerability, severity=None, details=None):
 
 # Query operations for the scan history page
 def get_domains_with_scans():
-    """Get all domains that have at least one scanned subdomain"""
-    print("Getting domains with scans...")
+    """Get all domains that have subdomains"""
+    print("Getting domains from database...")
     conn = get_db_connection()
     if conn is None:
-        print("Failed to get database connection for getting domains with scans")
+        print("Failed to get database connection for getting domains")
         return []
 
     try:
@@ -392,21 +392,25 @@ def get_domains_with_scans():
         domain_count = cursor.fetchone()[0]
         print(f"Total domains in database: {domain_count}")
 
-        # Then check if there are any subdomains with scans
+        # Then check if there are any subdomains
+        cursor.execute("SELECT COUNT(*) FROM SUBDOMAINS")
+        subdomain_count = cursor.fetchone()[0]
+        print(f"Total subdomains in database: {subdomain_count}")
+
+        # Also check how many are scanned (for debugging)
         cursor.execute("""
             SELECT COUNT(*) FROM SUBDOMAINS
             WHERE GauScanned = 1 OR NaabuScanned = 1 OR NucleiScanned = 1
         """)
         scanned_count = cursor.fetchone()[0]
-        print(f"Total subdomains with scans: {scanned_count}")
+        print(f"Total scanned subdomains: {scanned_count}")
 
-        # Now get the domains with scans
-        print("Executing query to get domains with scans...")
+        # Now get all domains that have subdomains
+        print("Executing query to get all domains with subdomains...")
         cursor.execute("""
             SELECT DISTINCT d.ID, d.Domain
             FROM DOMAINS d
             JOIN SUBDOMAINS s ON d.ID = s.DomainID
-            WHERE s.GauScanned = 1 OR s.NaabuScanned = 1 OR s.NucleiScanned = 1
             ORDER BY d.Domain
         """)
         results = [dict(row) for row in cursor.fetchall()]
@@ -427,11 +431,11 @@ def get_domains_with_scans():
             conn.close()
 
 def get_scanned_subdomains(domain_id):
-    """Get all scanned subdomains for a domain"""
-    print(f"Getting scanned subdomains for domain ID: {domain_id}")
+    """Get all subdomains for a domain"""
+    print(f"Getting all subdomains for domain ID: {domain_id}")
     conn = get_db_connection()
     if conn is None:
-        print(f"Failed to get database connection for getting scanned subdomains")
+        print(f"Failed to get database connection for getting subdomains")
         return []
 
     try:
@@ -451,16 +455,24 @@ def get_scanned_subdomains(domain_id):
         subdomain_count = cursor.fetchone()[0]
         print(f"Total subdomains for domain ID {domain_id}: {subdomain_count}")
 
-        # Now get the scanned subdomains
-        print(f"Executing query to get scanned subdomains for domain ID {domain_id}...")
+        # Also check how many are scanned (for debugging)
+        cursor.execute("""
+            SELECT COUNT(*) FROM SUBDOMAINS
+            WHERE DomainID = ? AND (GauScanned = 1 OR NaabuScanned = 1 OR NucleiScanned = 1)
+        """, (domain_id,))
+        scanned_count = cursor.fetchone()[0]
+        print(f"Total scanned subdomains for domain ID {domain_id}: {scanned_count}")
+
+        # Now get all subdomains for this domain
+        print(f"Executing query to get all subdomains for domain ID {domain_id}...")
         cursor.execute("""
             SELECT ID, Subdomain, GauScanned, NaabuScanned, NucleiScanned
             FROM SUBDOMAINS
-            WHERE DomainID = ? AND (GauScanned = 1 OR NaabuScanned = 1 OR NucleiScanned = 1)
+            WHERE DomainID = ?
             ORDER BY Subdomain
         """, (domain_id,))
         results = [dict(row) for row in cursor.fetchall()]
-        print(f"Found {len(results)} scanned subdomains for domain ID {domain_id}")
+        print(f"Found {len(results)} subdomains for domain ID {domain_id}")
 
         # Print the subdomains found
         for subdomain in results:

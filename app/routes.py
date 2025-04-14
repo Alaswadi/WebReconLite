@@ -106,11 +106,18 @@ def run_gau_for_host():
 
     # Extract domain from URL
     from urllib.parse import urlparse
+
+    # Add protocol if missing
+    if not url.startswith('http://') and not url.startswith('https://'):
+        url = 'https://' + url
+
     parsed_url = urlparse(url)
     domain = parsed_url.netloc
 
     if not domain:
         return jsonify({'error': 'Invalid URL'}), 400
+
+    print(f"Extracted domain: {domain} from URL: {url}")
 
     # Create a unique file for this host's Gau results
     host_gau_file = os.path.join(scan_dir, f'gau_{domain}.txt')
@@ -223,11 +230,18 @@ def run_naabu_for_host():
 
     # Extract domain from URL
     from urllib.parse import urlparse
+
+    # Add protocol if missing
+    if not url.startswith('http://') and not url.startswith('https://'):
+        url = 'https://' + url
+
     parsed_url = urlparse(url)
     domain = parsed_url.netloc
 
     if not domain:
         return jsonify({'error': 'Invalid URL'}), 400
+
+    print(f"Extracted domain: {domain} from URL: {url}")
 
     # Create a unique file for this host's Naabu results
     host_naabu_file = os.path.join(scan_dir, f'naabu_{domain}.txt')

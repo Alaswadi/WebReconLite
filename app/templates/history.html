@@ -73,10 +73,7 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Helper function to get the session ID from localStorage
-        function getSessionId() {
-            return localStorage.getItem('webreconlite_session_id');
-        }
+        // We don't need the getSessionId function anymore
 
         // Function to run GAU scan
         function runGauScan(url, sessionId, subdomainId, button) {
@@ -87,7 +84,8 @@
                 },
                 body: JSON.stringify({
                     url: url,
-                    session_id: sessionId
+                    session_id: sessionId,
+                    subdomain_id: subdomainId
                 })
             })
             .then(response => response.json())
@@ -139,7 +137,8 @@
                 },
                 body: JSON.stringify({
                     url: url,
-                    session_id: sessionId
+                    session_id: sessionId,
+                    subdomain_id: subdomainId
                 })
             })
             .then(response => response.json())
@@ -299,12 +298,9 @@
                                     e.stopPropagation(); // Prevent item click
                                     const url = this.getAttribute('data-url');
                                     const subdomainId = item.getAttribute('data-subdomain-id');
-                                    const sessionId = getSessionId();
-
-                                    if (!sessionId) {
-                                        alert('Session ID not found. Please run a new scan first.');
-                                        return;
-                                    }
+                                    // We don't need a session ID when running from the history page
+                                    // Just use a placeholder value
+                                    const sessionId = 'history-scan';
 
                                     // Disable button and show loading state
                                     this.disabled = true;
@@ -322,12 +318,9 @@
                                     e.stopPropagation(); // Prevent item click
                                     const url = this.getAttribute('data-url');
                                     const subdomainId = item.getAttribute('data-subdomain-id');
-                                    const sessionId = getSessionId();
-
-                                    if (!sessionId) {
-                                        alert('Session ID not found. Please run a new scan first.');
-                                        return;
-                                    }
+                                    // We don't need a session ID when running from the history page
+                                    // Just use a placeholder value
+                                    const sessionId = 'history-scan';
 
                                     // Disable button and show loading state
                                     this.disabled = true;

@@ -84,14 +84,25 @@ def run_gau_for_host():
 
     url = data['url']
     session_id = data.get('session_id')
+    subdomain_id = data.get('subdomain_id')
 
-    if not session_id:
-        return jsonify({'error': 'No session ID provided'}), 400
+    # If we have a subdomain_id, we're running from the history page
+    if subdomain_id:
+        print(f"Running GAU from history page for subdomain ID: {subdomain_id}")
+        # Create a temporary directory for this scan
+        import uuid
+        temp_session_id = str(uuid.uuid4())
+        scan_dir = os.path.join(current_app.config['RESULTS_DIR'], temp_session_id)
+        os.makedirs(scan_dir, exist_ok=True)
+    else:
+        # We're running from the main page, so we need a session ID
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
 
-    # Create a directory for this scan if it doesn't exist
-    scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
-    if not os.path.exists(scan_dir):
-        return jsonify({'error': 'Invalid session ID'}), 404
+        # Create a directory for this scan if it doesn't exist
+        scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
+        if not os.path.exists(scan_dir):
+            return jsonify({'error': 'Invalid session ID'}), 404
 
     # Extract domain from URL
     from urllib.parse import urlparse
@@ -190,14 +201,25 @@ def run_naabu_for_host():
 
     url = data['url']
     session_id = data.get('session_id')
+    subdomain_id = data.get('subdomain_id')
 
-    if not session_id:
-        return jsonify({'error': 'No session ID provided'}), 400
+    # If we have a subdomain_id, we're running from the history page
+    if subdomain_id:
+        print(f"Running Naabu from history page for subdomain ID: {subdomain_id}")
+        # Create a temporary directory for this scan
+        import uuid
+        temp_session_id = str(uuid.uuid4())
+        scan_dir = os.path.join(current_app.config['RESULTS_DIR'], temp_session_id)
+        os.makedirs(scan_dir, exist_ok=True)
+    else:
+        # We're running from the main page, so we need a session ID
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
 
-    # Create a directory for this scan if it doesn't exist
-    scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
-    if not os.path.exists(scan_dir):
-        return jsonify({'error': 'Invalid session ID'}), 404
+        # Create a directory for this scan if it doesn't exist
+        scan_dir = os.path.join(current_app.config['RESULTS_DIR'], session_id)
+        if not os.path.exists(scan_dir):
+            return jsonify({'error': 'Invalid session ID'}), 404
 
     # Extract domain from URL
     from urllib.parse import urlparse

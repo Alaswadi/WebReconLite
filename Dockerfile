@@ -121,6 +121,9 @@ COPY . .
 # Create results and data directories
 RUN mkdir -p app/results app/data
 
+# Copy GAU configuration file
+COPY gau.toml /root/.gau.toml
+
 # Set environment variables
 ENV FLASK_APP=app.py
 ENV PYTHONUNBUFFERED=1

@@ -39,6 +39,33 @@ else
     echo "WARNING: PDCP_API_KEY is not set. Chaos will not work properly."
 fi
 
+# Create GAU configuration file
+echo "Creating GAU configuration file..."
+cat > /root/.gau.toml << 'EOL'
+threads = 50
+verbose = false
+retries = 15
+subdomains = false
+parameters = false
+providers = ["wayback","commoncrawl","otx","urlscan"]
+blacklist = ["ttf","woff","svg","png","jpg"]
+json = false
+
+[urlscan]
+  apikey = ""
+
+[filters]
+  from = ""
+  to = ""
+  matchstatuscodes = []
+  matchmimetypes = []
+  filterstatuscodes = []
+  filtermimetypes = ["image/png", "image/jpg", "image/svg+xml"]
+EOL
+
+echo "GAU configuration file created at /root/.gau.toml"
+cat /root/.gau.toml
+
 # Check tool availability
 echo "Checking tool availability:"
 /usr/local/bin/check-tools.sh

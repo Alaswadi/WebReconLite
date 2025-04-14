@@ -1,5 +1,115 @@
 /* WebReconLite - Cyberpunk Theme */
 
+/* Scan History Page Styles */
+.domains-card, .subdomains-card, .subdomain-details-card {
+    border: 1px solid #2a2a2a;
+    background-color: var(--background-alt-color);
+    color: var(--text-color);
+    margin-bottom: 20px;
+    box-shadow: var(--box-shadow);
+}
+
+.card-header {
+    background-color: rgba(0, 255, 255, 0.1);
+    border-bottom: 1px solid var(--primary-color);
+    padding: 10px 15px;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.domain-list, .subdomain-list {
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--background-alt-color);
+}
+
+.domain-item, .subdomain-item {
+    background-color: rgba(26, 26, 46, 0.8);
+    color: var(--text-color);
+    border: 1px solid #3a3a3a;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 10px 15px;
+}
+
+.domain-item:hover, .subdomain-item:hover {
+    background-color: rgba(0, 255, 255, 0.1);
+    border-color: var(--primary-color);
+}
+
+.domain-item.active, .subdomain-item.active {
+    background-color: rgba(0, 255, 255, 0.2);
+    border-left: 4px solid var(--primary-color);
+    box-shadow: 0 0 5px var(--primary-color);
+}
+
+.scan-status {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+}
+
+.badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+.bg-success {
+    background-color: var(--success-color);
+    color: #000;
+}
+
+.bg-secondary {
+    background-color: #444;
+    color: #fff;
+}
+
+.scan-result-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.url-list-container, .port-list, .vulnerability-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #3a3a3a;
+    border-radius: var(--border-radius);
+    margin-top: 10px;
+}
+
+.url-item a, .port-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.url-item a:hover, .port-link:hover {
+    text-decoration: underline;
+    color: var(--accent-color);
+}
+
+.filter-input {
+    background-color: rgba(26, 26, 46, 0.8);
+    border: 1px solid #3a3a3a;
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    width: 100%;
+}
+
+.filter-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 5px var(--primary-color);
+}
+
 /* Base Styles */
 :root {
     --primary-color: #00ffff; /* Cyan */

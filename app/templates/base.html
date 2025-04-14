@@ -16,20 +16,22 @@
             <nav>
                 <ul>
                     <li><a href="{{ url_for('main.index') }}" class="nav-link">Home</a></li>
+                    <li><a href="{{ url_for('main.scan_history') }}" class="nav-link">Scan History</a></li>
                 </ul>
             </nav>
         </header>
-        
+
         <main>
             {% block content %}{% endblock %}
         </main>
-        
+
         <footer>
             <p>&copy; {% block year %}2025{% endblock %} WebReconLite | <a href="https://github.com/yourusername/webreconlite" target="_blank">GitHub</a></p>
         </footer>
     </div>
-    
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
+    {% block scripts %}{% endblock %}
 </body>
 </html>

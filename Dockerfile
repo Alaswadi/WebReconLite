@@ -118,8 +118,8 @@ RUN chmod +x /usr/local/bin/check-tools.sh
 # Copy application code
 COPY . .
 
-# Create results directory
-RUN mkdir -p app/results
+# Create results and data directories
+RUN mkdir -p app/results app/data
 
 # Set environment variables
 ENV FLASK_APP=app.py

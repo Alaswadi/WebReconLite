@@ -17,6 +17,7 @@ show_help() {
     echo "  tools       Check which tools are installed"
     echo "  flower      Open Flower monitoring UI in browser"
     echo "  celery      Show Celery worker logs"
+    echo "  testdb      Test the database functionality"
     echo "  help        Show this help message"
     echo ""
 }
@@ -86,6 +87,12 @@ show_celery_logs() {
     docker-compose logs -f celery-worker
 }
 
+# Function to test the database functionality
+test_database() {
+    echo "Testing database functionality..."
+    docker-compose exec webreconlite python test_db.py
+}
+
 # Main script logic
 case "$1" in
     build)
@@ -114,6 +121,9 @@ case "$1" in
         ;;
     celery)
         show_celery_logs
+        ;;
+    testdb)
+        test_database
         ;;
     help|*)
         show_help

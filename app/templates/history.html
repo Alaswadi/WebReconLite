@@ -1,0 +1,459 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan History - WebReconLite{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="page-title">Scan History</h1>
+            <p class="lead">View your previous scan results</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card domains-card">
+                <div class="card-header">
+                    <h5>Domains</h5>
+                </div>
+                <div class="card-body">
+                    {% if domains %}
+                        <ul class="list-group domain-list">
+                            {% for domain in domains %}
+                                <li class="list-group-item domain-item" data-domain-id="{{ domain.ID }}">
+                                    {{ domain.Domain }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="no-domains">No domains with scan results found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card subdomains-card">
+                <div class="card-header">
+                    <h5>Subdomains <span id="selected-domain"></span></h5>
+                </div>
+                <div class="card-body">
+                    <div id="subdomains-loading" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span>Loading subdomains...</span>
+                    </div>
+                    <div id="subdomains-container">
+                        <p class="select-domain-prompt">Select a domain to view its subdomains.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card subdomain-details-card mt-4" style="display: none;">
+                <div class="card-header">
+                    <h5>Scan Results for <span id="selected-subdomain"></span></h5>
+                </div>
+                <div class="card-body">
+                    <div id="subdomain-details-loading" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span>Loading scan results...</span>
+                    </div>
+                    <div id="subdomain-details-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Domain selection
+        const domainItems = document.querySelectorAll('.domain-item');
+        domainItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Clear previous selection
+                domainItems.forEach(i => i.classList.remove('active'));
+                
+                // Mark this item as active
+                this.classList.add('active');
+                
+                // Get domain ID and name
+                const domainId = this.getAttribute('data-domain-id');
+                const domainName = this.textContent.trim();
+                
+                // Update selected domain display
+                document.getElementById('selected-domain').textContent = ` - ${domainName}`;
+                
+                // Hide subdomain details
+                document.querySelector('.subdomain-details-card').style.display = 'none';
+                
+                // Show loading indicator
+                document.getElementById('subdomains-loading').style.display = 'flex';
+                document.getElementById('subdomains-container').innerHTML = '';
+                
+                // Fetch subdomains for this domain
+                fetchSubdomains(domainId);
+            });
+        });
+        
+        // Function to fetch subdomains for a domain
+        function fetchSubdomains(domainId) {
+            fetch(`/history/domain/${domainId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading indicator
+                    document.getElementById('subdomains-loading').style.display = 'none';
+                    
+                    // Display subdomains
+                    const container = document.getElementById('subdomains-container');
+                    
+                    if (data.subdomains && data.subdomains.length > 0) {
+                        let html = '<ul class="list-group subdomain-list">';
+                        
+                        data.subdomains.forEach(subdomain => {
+                            html += `
+                                <li class="list-group-item subdomain-item" data-subdomain-id="${subdomain.ID}">
+                                    <div class="subdomain-name">${subdomain.Subdomain}</div>
+                                    <div class="scan-status">
+                                        <span class="badge ${subdomain.GauScanned ? 'bg-success' : 'bg-secondary'}">
+                                            GAU: ${subdomain.GauScanned ? 'Scanned' : 'Not Scanned'}
+                                        </span>
+                                        <span class="badge ${subdomain.NaabuScanned ? 'bg-success' : 'bg-secondary'}">
+                                            Naabu: ${subdomain.NaabuScanned ? 'Scanned' : 'Not Scanned'}
+                                        </span>
+                                        <span class="badge ${subdomain.NucleiScanned ? 'bg-success' : 'bg-secondary'}">
+                                            Nuclei: ${subdomain.NucleiScanned ? 'Scanned' : 'Not Scanned'}
+                                        </span>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        
+                        html += '</ul>';
+                        container.innerHTML = html;
+                        
+                        // Add click event to subdomain items
+                        const subdomainItems = document.querySelectorAll('.subdomain-item');
+                        subdomainItems.forEach(item => {
+                            item.addEventListener('click', function() {
+                                // Clear previous selection
+                                subdomainItems.forEach(i => i.classList.remove('active'));
+                                
+                                // Mark this item as active
+                                this.classList.add('active');
+                                
+                                // Get subdomain ID and name
+                                const subdomainId = this.getAttribute('data-subdomain-id');
+                                const subdomainName = this.querySelector('.subdomain-name').textContent.trim();
+                                
+                                // Update selected subdomain display
+                                document.getElementById('selected-subdomain').textContent = subdomainName;
+                                
+                                // Show subdomain details card
+                                document.querySelector('.subdomain-details-card').style.display = 'block';
+                                
+                                // Show loading indicator
+                                document.getElementById('subdomain-details-loading').style.display = 'flex';
+                                document.getElementById('subdomain-details-container').innerHTML = '';
+                                
+                                // Fetch subdomain details
+                                fetchSubdomainDetails(subdomainId);
+                            });
+                        });
+                    } else {
+                        container.innerHTML = '<p class="no-subdomains">No scanned subdomains found for this domain.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching subdomains:', error);
+                    document.getElementById('subdomains-loading').style.display = 'none';
+                    document.getElementById('subdomains-container').innerHTML = 
+                        '<p class="error-message">Error loading subdomains. Please try again.</p>';
+                });
+        }
+        
+        // Function to fetch subdomain details
+        function fetchSubdomainDetails(subdomainId) {
+            fetch(`/history/subdomain/${subdomainId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading indicator
+                    document.getElementById('subdomain-details-loading').style.display = 'none';
+                    
+                    // Display subdomain details
+                    const container = document.getElementById('subdomain-details-container');
+                    let html = '';
+                    
+                    // GAU Results
+                    if (data.GauScanned && data.gau_results && data.gau_results.length > 0) {
+                        html += `
+                            <div class="scan-result-section">
+                                <h6>GAU Results (${data.gau_results.length} URLs found)</h6>
+                                <div class="gau-results">
+                                    <input type="text" class="form-control mb-2 filter-input" 
+                                           placeholder="Filter URLs..." id="gau-filter">
+                                    <div class="url-list-container">
+                                        <ul class="list-group url-list">
+                        `;
+                        
+                        data.gau_results.forEach(url => {
+                            html += `
+                                <li class="list-group-item url-item">
+                                    <a href="${url}" target="_blank">${url}</a>
+                                </li>
+                            `;
+                        });
+                        
+                        html += `
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (data.GauScanned) {
+                        html += `
+                            <div class="scan-result-section">
+                                <h6>GAU Results</h6>
+                                <p class="no-results">No URLs found.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Naabu Results
+                    if (data.NaabuScanned && data.naabu_results && data.naabu_results.length > 0) {
+                        html += `
+                            <div class="scan-result-section">
+                                <h6>Naabu Results (${data.naabu_results.length} open ports found)</h6>
+                                <div class="naabu-results">
+                                    <ul class="list-group port-list">
+                        `;
+                        
+                        data.naabu_results.forEach(port => {
+                            html += `
+                                <li class="list-group-item port-item">
+                                    <span class="port-number">${port}</span>
+                                    <a href="${port === 443 ? 'https' : 'http'}://${data.Subdomain}:${port}" 
+                                       target="_blank" class="port-link">
+                                        ${port === 443 ? 'https' : 'http'}://${data.Subdomain}:${port}
+                                    </a>
+                                </li>
+                            `;
+                        });
+                        
+                        html += `
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+                    } else if (data.NaabuScanned) {
+                        html += `
+                            <div class="scan-result-section">
+                                <h6>Naabu Results</h6>
+                                <p class="no-results">No open ports found.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Nuclei Results
+                    if (data.NucleiScanned && data.nuclei_results && data.nuclei_results.length > 0) {
+                        html += `
+                            <div class="scan-result-section">
+                                <h6>Nuclei Results (${data.nuclei_results.length} vulnerabilities found)</h6>
+                                <div class="nuclei-results">
+                                    <ul class="list-group vulnerability-list">
+                        `;
+                        
+                        data.nuclei_results.forEach(vuln => {
+                            const severityClass = getSeverityClass(vuln.severity);
+                            html += `
+                                <li class="list-group-item vulnerability-item">
+                                    <div class="vulnerability-name">
+                                        <span class="badge ${severityClass}">${vuln.severity || 'Unknown'}</span>
+                                        ${vuln.vulnerability}
+                                    </div>
+                                    ${vuln.details ? `<div class="vulnerability-details">${vuln.details}</div>` : ''}
+                                </li>
+                            `;
+                        });
+                        
+                        html += `
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+                    } else if (data.NucleiScanned) {
+                        html += `
+                            <div class="scan-result-section">
+                                <h6>Nuclei Results</h6>
+                                <p class="no-results">No vulnerabilities found.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    if (html === '') {
+                        html = '<p class="no-scan-results">No scan results available for this subdomain.</p>';
+                    }
+                    
+                    container.innerHTML = html;
+                    
+                    // Set up filtering for GAU results
+                    const gauFilter = document.getElementById('gau-filter');
+                    if (gauFilter) {
+                        gauFilter.addEventListener('input', function() {
+                            const filterValue = this.value.toLowerCase();
+                            const urlItems = document.querySelectorAll('.url-item');
+                            
+                            urlItems.forEach(item => {
+                                const url = item.textContent.trim().toLowerCase();
+                                if (url.includes(filterValue)) {
+                                    item.style.display = 'block';
+                                } else {
+                                    item.style.display = 'none';
+                                }
+                            });
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching subdomain details:', error);
+                    document.getElementById('subdomain-details-loading').style.display = 'none';
+                    document.getElementById('subdomain-details-container').innerHTML = 
+                        '<p class="error-message">Error loading subdomain details. Please try again.</p>';
+                });
+        }
+        
+        // Helper function to get severity class
+        function getSeverityClass(severity) {
+            if (!severity) return 'bg-secondary';
+            
+            severity = severity.toLowerCase();
+            if (severity === 'critical') return 'bg-danger';
+            if (severity === 'high') return 'bg-danger';
+            if (severity === 'medium') return 'bg-warning';
+            if (severity === 'low') return 'bg-info';
+            if (severity === 'info') return 'bg-primary';
+            
+            return 'bg-secondary';
+        }
+    });
+</script>
+
+<style>
+    .domains-card, .subdomains-card, .subdomain-details-card {
+        height: 100%;
+        border: 1px solid #2a2a2a;
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+    }
+    
+    .card-header {
+        background-color: #2a2a2a;
+        border-bottom: 1px solid #3a3a3a;
+    }
+    
+    .domain-list, .subdomain-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .domain-item, .subdomain-item {
+        background-color: #2a2a2a;
+        color: #e0e0e0;
+        border: 1px solid #3a3a3a;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .domain-item:hover, .subdomain-item:hover {
+        background-color: #3a3a3a;
+    }
+    
+    .domain-item.active, .subdomain-item.active {
+        background-color: #4a4a4a;
+        border-left: 4px solid #00aaff;
+    }
+    
+    .subdomain-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .scan-status {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .scan-result-section {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #3a3a3a;
+    }
+    
+    .scan-result-section:last-child {
+        border-bottom: none;
+    }
+    
+    .url-list-container {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .url-item, .port-item, .vulnerability-item {
+        background-color: #2a2a2a;
+        color: #e0e0e0;
+        border: 1px solid #3a3a3a;
+    }
+    
+    .url-item a, .port-link {
+        color: #00aaff;
+        text-decoration: none;
+        word-break: break-all;
+    }
+    
+    .url-item a:hover, .port-link:hover {
+        text-decoration: underline;
+    }
+    
+    .port-number {
+        font-weight: bold;
+        margin-right: 10px;
+        color: #00ff88;
+    }
+    
+    .vulnerability-name {
+        font-weight: bold;
+    }
+    
+    .vulnerability-details {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #aaaaaa;
+    }
+    
+    #subdomains-loading, #subdomain-details-loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .no-domains, .no-subdomains, .no-results, .no-scan-results, .select-domain-prompt, .error-message {
+        text-align: center;
+        padding: 20px;
+        color: #aaaaaa;
+    }
+    
+    .error-message {
+        color: #ff6666;
+    }
+</style>
+{% endblock %}

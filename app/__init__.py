@@ -37,6 +37,14 @@ def create_app():
     print(f"Creating results directory: {app.config['RESULTS_DIR']}")
     os.makedirs(app.config['RESULTS_DIR'], exist_ok=True)
 
+    # Initialize database
+    print("Initializing database...")
+    from app.database import init_db
+    if init_db():
+        print("Database initialized successfully")
+    else:
+        print("Failed to initialize database")
+
     # Register blueprints
     print("Registering blueprints...")
     from app.routes import main

@@ -8,6 +8,10 @@ from celery.result import AsyncResult
 from app.tools import run_subdomain_enumeration, run_web_detection, get_tool_status
 from app.utils import validate_domain
 from app.tasks import run_scan_task, run_gau_task, run_naabu_task
+from app.database import (add_domain, add_subdomain, update_subdomain_scan_status,
+                         add_gau_results_batch, add_naabu_results_batch, get_domain_id,
+                         get_subdomain_id, get_domains_with_scans, get_scanned_subdomains,
+                         get_subdomain_details, get_gau_results, get_naabu_results)
 
 # Create blueprint
 main = Blueprint('main', __name__)
@@ -19,6 +23,28 @@ active_scans = {}
 def index():
     """Render the home page with the scan form."""
     return render_template('index.html')
+
+@main.route('/history')
+def scan_history():
+    """Render the scan history page."""
+    domains = get_domains_with_scans()
+    return render_template('history.html', domains=domains)
+
+@main.route('/history/domain/<int:domain_id>')
+def domain_history(domain_id):
+    """Get scan history for a specific domain."""
+    subdomains = get_scanned_subdomains(domain_id)
+    return jsonify({
+        'subdomains': subdomains
+    })
+
+@main.route('/history/subdomain/<int:subdomain_id>')
+def subdomain_details(subdomain_id):
+    """Get detailed scan results for a specific subdomain."""
+    details = get_subdomain_details(subdomain_id)
+    if not details:
+        return jsonify({'error': 'Subdomain not found'}), 404
+    return jsonify(details)
 
 @main.route('/tools')
 def tools_status():
@@ -87,6 +113,39 @@ def run_gau_for_host():
                 print(f"Updated status file with {len(urls)} URLs")
             except Exception as e:
                 print(f"Error updating status file: {str(e)}")
+
+        # Store GAU results in the database
+        try:
+            # Get domain ID
+            domain_id = get_domain_id(domain)
+            if not domain_id:
+                print(f"Domain {domain} not found in database, adding it")
+                domain_id = add_domain(domain)
+                if not domain_id:
+                    print(f"Failed to add domain {domain} to database")
+                    raise Exception(f"Failed to add domain {domain} to database")
+
+            # Get subdomain ID
+            subdomain_id = get_subdomain_id(domain_id, domain)
+            if not subdomain_id:
+                print(f"Subdomain {domain} not found in database, adding it")
+                subdomain_id = add_subdomain(domain_id, domain)
+                if not subdomain_id:
+                    print(f"Failed to add subdomain {domain} to database")
+                    raise Exception(f"Failed to add subdomain {domain} to database")
+
+            # Add GAU results to database
+            print(f"Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
+            if add_gau_results_batch(subdomain_id, urls):
+                # Update subdomain scan status
+                update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
+                print(f"Successfully added GAU results to database and updated scan status")
+            else:
+                print(f"Failed to add GAU results to database")
+        except Exception as e:
+            print(f"Error storing GAU results in database: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         # Return results directly
         return jsonify({
@@ -164,6 +223,41 @@ def run_naabu_for_host():
                 print(f"Updated status file with {len(ports)} ports for {domain}")
             except Exception as e:
                 print(f"Error updating status file: {str(e)}")
+
+        # Store Naabu results in the database
+        try:
+            # Get domain ID
+            domain_id = get_domain_id(domain)
+            if not domain_id:
+                print(f"Domain {domain} not found in database, adding it")
+                domain_id = add_domain(domain)
+                if not domain_id:
+                    print(f"Failed to add domain {domain} to database")
+                    raise Exception(f"Failed to add domain {domain} to database")
+
+            # Get subdomain ID
+            subdomain_id = get_subdomain_id(domain_id, domain)
+            if not subdomain_id:
+                print(f"Subdomain {domain} not found in database, adding it")
+                subdomain_id = add_subdomain(domain_id, domain)
+                if not subdomain_id:
+                    print(f"Failed to add subdomain {domain} to database")
+                    raise Exception(f"Failed to add subdomain {domain} to database")
+
+            # Add Naabu results to database
+            print(f"Adding {len(ports)} Naabu results to database for subdomain ID {subdomain_id}")
+            # Extract port numbers from the port objects
+            port_numbers = [int(port['port']) for port in ports]
+            if add_naabu_results_batch(subdomain_id, port_numbers):
+                # Update subdomain scan status
+                update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
+                print(f"Successfully added Naabu results to database and updated scan status")
+            else:
+                print(f"Failed to add Naabu results to database")
+        except Exception as e:
+            print(f"Error storing Naabu results in database: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         # Return results directly
         return jsonify({
@@ -255,10 +349,25 @@ def run_scan(domain, session_id, scan_dir):
         print(f"run_scan: Updating status to 'running'")
         update_status(session_id, scan_dir, status='running', progress=5, current_tool='Subdomain Enumeration')
 
+        # Add domain to database
+        print(f"run_scan: Adding domain {domain} to database")
+        domain_id = add_domain(domain)
+        if not domain_id:
+            print(f"run_scan: Failed to add domain {domain} to database")
+            raise Exception(f"Failed to add domain {domain} to database")
+        print(f"run_scan: Domain added with ID {domain_id}")
+
         # Run subdomain enumeration
         print(f"run_scan: Starting subdomain enumeration")
         subdomains = run_subdomain_enumeration(domain, scan_dir, session_id, update_callback=lambda p, t: update_status(session_id, scan_dir, progress=p, current_tool=t))
         print(f"run_scan: Subdomain enumeration completed, found {len(subdomains)} subdomains")
+
+        # Add subdomains to database
+        print(f"run_scan: Adding {len(subdomains)} subdomains to database")
+        for subdomain in subdomains:
+            subdomain_id = add_subdomain(domain_id, subdomain)
+            if not subdomain_id:
+                print(f"run_scan: Failed to add subdomain {subdomain} to database")
 
         # Update status with subdomains
         print(f"run_scan: Updating status with subdomains")

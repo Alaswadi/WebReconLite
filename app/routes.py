@@ -378,12 +378,18 @@ def run_scan(domain, session_id, scan_dir):
         subdomains = run_subdomain_enumeration(domain, scan_dir, session_id, update_callback=lambda p, t: update_status(session_id, scan_dir, progress=p, current_tool=t))
         print(f"run_scan: Subdomain enumeration completed, found {len(subdomains)} subdomains")
 
-        # Add subdomains to database
-        print(f"run_scan: Adding {len(subdomains)} subdomains to database")
+        # Add subdomains to database and mark them as scanned
+        print(f"run_scan: Adding {len(subdomains)} subdomains to database and marking them as scanned")
+        subdomain_ids = []
         for subdomain in subdomains:
             subdomain_id = add_subdomain(domain_id, subdomain)
             if not subdomain_id:
                 print(f"run_scan: Failed to add subdomain {subdomain} to database")
+                continue
+            subdomain_ids.append(subdomain_id)
+
+        # Mark all live hosts as scanned
+        print(f"run_scan: Marking live hosts as scanned")
 
         # Update status with subdomains
         print(f"run_scan: Updating status with subdomains")
@@ -393,6 +399,45 @@ def run_scan(domain, session_id, scan_dir):
         print(f"run_scan: Starting web detection")
         live_hosts, urls = run_web_detection(domain, subdomains, scan_dir, session_id, update_callback=lambda p, t: update_status(session_id, scan_dir, progress=p, current_tool=t))
         print(f"run_scan: Web detection completed, found {len(live_hosts)} live hosts and {len(urls)} URLs")
+
+        # Mark all live hosts as scanned in the database
+        print(f"run_scan: Marking {len(live_hosts)} live hosts as scanned in the database")
+        for host in live_hosts:
+            # Extract hostname from URL
+            from urllib.parse import urlparse
+            parsed_url = urlparse(host['url'])
+            hostname = parsed_url.netloc
+
+            # Get subdomain ID
+            subdomain_id = get_subdomain_id(domain_id, hostname)
+            if not subdomain_id:
+                print(f"run_scan: Subdomain {hostname} not found in database, adding it")
+                subdomain_id = add_subdomain(domain_id, hostname)
+                if not subdomain_id:
+                    print(f"run_scan: Failed to add subdomain {hostname} to database")
+                    continue
+
+            # Mark as scanned
+            print(f"run_scan: Marking subdomain {hostname} (ID: {subdomain_id}) as scanned")
+
+            # Store initial URLs in the database
+            if urls:
+                filtered_urls = [url for url in urls if hostname in url]
+                if filtered_urls:
+                    print(f"run_scan: Storing {len(filtered_urls)} URLs for {hostname}")
+                    add_gau_results_batch(subdomain_id, filtered_urls)
+                    update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
+                else:
+                    print(f"run_scan: No URLs found for {hostname}")
+                    update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)  # Still mark as scanned
+            else:
+                update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)  # Still mark as scanned
+
+            # Store ports in the database (default to 80/443 for web hosts)
+            ports = [80, 443]  # Default ports for web hosts
+            print(f"run_scan: Storing default ports {ports} for {hostname}")
+            add_naabu_results_batch(subdomain_id, ports)
+            update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
 
         # Update final status - URLs will be added later when GAU is run manually
         print(f"run_scan: Updating status to 'completed'")

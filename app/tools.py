@@ -597,11 +597,34 @@ def run_web_detection(domain, subdomains, scan_dir, session_id, update_callback=
     if update_callback:
         update_callback(95, "Skipping GAU - will be triggered manually by the user")
 
-    # Create empty URLs list
+    # Create initial URLs list with common paths for each live host
     urls = []
+    for host in live_hosts:
+        base_url = host['url']
+        # Remove trailing slash if present
+        if base_url.endswith('/'):
+            base_url = base_url[:-1]
 
-    # Create an empty GAU file as a placeholder
+        # Add common paths that are likely to exist
+        common_paths = [
+            '',  # Root path
+            '/index.html',
+            '/about',
+            '/contact',
+            '/login',
+            '/register',
+            '/api',
+            '/sitemap.xml',
+            '/robots.txt'
+        ]
+
+        for path in common_paths:
+            urls.append(f"{base_url}{path}")
+
+    # Save these initial URLs to the GAU file
     with open(gau_file, 'w') as f:
-        f.write(f"# GAU will be run manually by the user\n")
+        f.write(f"# Initial URLs - GAU can be run manually by the user for more\n")
+        for url in urls:
+            f.write(f"{url}\n")
 
     return live_hosts, urls

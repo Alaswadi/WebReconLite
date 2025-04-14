@@ -155,46 +155,87 @@ def run_httpx(subdomains_file, output_file):
 
 def run_gau(domain, output_file):
     """Run Gau for URL discovery."""
+    print(f"Running GAU for domain: {domain}, output file: {output_file}")
+
+    # Make sure the domain is properly formatted
+    if domain.startswith('http://') or domain.startswith('https://'):
+        from urllib.parse import urlparse
+        parsed_url = urlparse(domain)
+        domain = parsed_url.netloc
+        print(f"Extracted domain from URL: {domain}")
+
     # Different versions of gau have different output flags
-    # Try using shell redirection instead of -o flag
+    # Try using direct command with output redirection first
     try:
-        # First try with shell redirection
-        command = f"gau {domain} > {output_file}"
+        # First try with direct command and output redirection
+        print(f"Trying gau with direct command: gau {domain}")
+        process = subprocess.Popen(
+            ["gau", domain],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate(timeout=300)
+
+        if stdout:
+            print(f"GAU command succeeded, got {len(stdout.splitlines())} URLs")
+            with open(output_file, 'w') as f:
+                f.write(stdout)
+            return "Gau completed successfully (direct command)"
+        else:
+            print(f"GAU command returned no output. Error: {stderr}")
+
+        # Try with --o flag
+        print("Trying with --o flag")
+        command = f"gau {domain} --o {output_file}"
         result = run_tool("Gau", command)
 
         # Check if the output file was created and has content
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"GAU succeeded with --o flag")
             return result
 
-        # If the file is empty or doesn't exist, try with different flags
-        print("Trying alternative gau command formats...")
-
-        # Try with --o flag
-        command = f"gau {domain} --o {output_file}"
+        # Try with -o flag
+        print("Trying with -o flag")
+        command = f"gau {domain} -o {output_file}"
         result = run_tool("Gau", command)
 
         # Check again
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"GAU succeeded with -o flag")
             return result
 
         # Try with -output flag
+        print("Trying with -output flag")
         command = f"gau {domain} -output {output_file}"
         result = run_tool("Gau", command)
 
         # Check again
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"GAU succeeded with -output flag")
             return result
 
-        # If all else fails, run gau and manually write output to file
-        command = f"gau {domain}"
-        output = run_tool("Gau", command, None)  # Don't specify output file here
+        # If all else fails, try waybackurls as an alternative
+        print("Trying waybackurls as an alternative")
+        try:
+            process = subprocess.Popen(
+                ["waybackurls", domain],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            stdout, stderr = process.communicate(timeout=300)
 
-        if output:
-            with open(output_file, 'w') as f:
-                f.write(output)
-            return "Gau completed successfully (manual output capture)"
+            if stdout:
+                print(f"waybackurls command succeeded, got {len(stdout.splitlines())} URLs")
+                with open(output_file, 'w') as f:
+                    f.write(stdout)
+                return "waybackurls completed successfully (as GAU alternative)"
+        except Exception as e:
+            print(f"Error running waybackurls: {str(e)}")
 
         # If we still don't have output, create a dummy file with example URLs
+        print("All GAU attempts failed, using fallback URLs")
         with open(output_file, 'w') as f:
             f.write(f"https://{domain}/index.html\n")
             f.write(f"https://{domain}/about\n")
@@ -206,6 +247,9 @@ def run_gau(domain, output_file):
 
     except Exception as e:
         print(f"Error running gau: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
         # Create a dummy file with example URLs
         with open(output_file, 'w') as f:
             f.write(f"https://{domain}/index.html\n")
@@ -430,11 +474,30 @@ def parse_httpx_output(file_path):
 
 def parse_gau_output(file_path):
     """Parse Gau output to extract URLs."""
+    print(f"Parsing GAU output from file: {file_path}")
+
     if not os.path.exists(file_path):
+        print(f"GAU output file does not exist: {file_path}")
         return []
 
-    with open(file_path, 'r') as f:
-        return [line.strip() for line in f if line.strip()]
+    try:
+        with open(file_path, 'r') as f:
+            urls = [line.strip() for line in f if line.strip()]
+            print(f"Parsed {len(urls)} URLs from GAU output")
+
+            # Print a sample of the URLs for debugging
+            if urls:
+                sample = urls[:5] if len(urls) > 5 else urls
+                print(f"Sample URLs: {sample}")
+            else:
+                print("No URLs found in GAU output file")
+
+            return urls
+    except Exception as e:
+        print(f"Error parsing GAU output: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 def run_subdomain_enumeration(domain, scan_dir, session_id, update_callback=None):
     """Run all subdomain enumeration tools concurrently."""

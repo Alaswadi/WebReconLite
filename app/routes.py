@@ -150,23 +150,31 @@ def run_gau_for_host():
 
         # Store GAU results in the database
         try:
-            # Get domain ID
-            domain_id = get_domain_id(domain)
-            if not domain_id:
-                print(f"Domain {domain} not found in database, adding it")
-                domain_id = add_domain(domain)
+            # If we have a subdomain_id from the request, use it directly
+            if subdomain_id:
+                print(f"Using provided subdomain_id: {subdomain_id} from history page")
+            else:
+                # Otherwise, look up or create the domain and subdomain
+                print(f"Looking up domain and subdomain in database")
+                # Get domain ID
+                domain_id = get_domain_id(domain)
                 if not domain_id:
-                    print(f"Failed to add domain {domain} to database")
-                    raise Exception(f"Failed to add domain {domain} to database")
+                    print(f"Domain {domain} not found in database, adding it")
+                    domain_id = add_domain(domain)
+                    if not domain_id:
+                        print(f"Failed to add domain {domain} to database")
+                        raise Exception(f"Failed to add domain {domain} to database")
 
-            # Get subdomain ID
-            subdomain_id = get_subdomain_id(domain_id, domain)
-            if not subdomain_id:
-                print(f"Subdomain {domain} not found in database, adding it")
-                subdomain_id = add_subdomain(domain_id, domain)
+                # Get subdomain ID
+                subdomain_id = get_subdomain_id(domain_id, domain)
                 if not subdomain_id:
-                    print(f"Failed to add subdomain {domain} to database")
-                    raise Exception(f"Failed to add subdomain {domain} to database")
+                    print(f"Subdomain {domain} not found in database, adding it")
+                    subdomain_id = add_subdomain(domain_id, domain)
+                    if not subdomain_id:
+                        print(f"Failed to add subdomain {domain} to database")
+                        raise Exception(f"Failed to add subdomain {domain} to database")
+
+            print(f"Using subdomain_id: {subdomain_id} for storing GAU results")
 
             # Add GAU results to database
             print(f"Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
@@ -278,23 +286,31 @@ def run_naabu_for_host():
 
         # Store Naabu results in the database
         try:
-            # Get domain ID
-            domain_id = get_domain_id(domain)
-            if not domain_id:
-                print(f"Domain {domain} not found in database, adding it")
-                domain_id = add_domain(domain)
+            # If we have a subdomain_id from the request, use it directly
+            if subdomain_id:
+                print(f"Using provided subdomain_id: {subdomain_id} from history page")
+            else:
+                # Otherwise, look up or create the domain and subdomain
+                print(f"Looking up domain and subdomain in database")
+                # Get domain ID
+                domain_id = get_domain_id(domain)
                 if not domain_id:
-                    print(f"Failed to add domain {domain} to database")
-                    raise Exception(f"Failed to add domain {domain} to database")
+                    print(f"Domain {domain} not found in database, adding it")
+                    domain_id = add_domain(domain)
+                    if not domain_id:
+                        print(f"Failed to add domain {domain} to database")
+                        raise Exception(f"Failed to add domain {domain} to database")
 
-            # Get subdomain ID
-            subdomain_id = get_subdomain_id(domain_id, domain)
-            if not subdomain_id:
-                print(f"Subdomain {domain} not found in database, adding it")
-                subdomain_id = add_subdomain(domain_id, domain)
+                # Get subdomain ID
+                subdomain_id = get_subdomain_id(domain_id, domain)
                 if not subdomain_id:
-                    print(f"Failed to add subdomain {domain} to database")
-                    raise Exception(f"Failed to add subdomain {domain} to database")
+                    print(f"Subdomain {domain} not found in database, adding it")
+                    subdomain_id = add_subdomain(domain_id, domain)
+                    if not subdomain_id:
+                        print(f"Failed to add subdomain {domain} to database")
+                        raise Exception(f"Failed to add subdomain {domain} to database")
+
+            print(f"Using subdomain_id: {subdomain_id} for storing Naabu results")
 
             # Add Naabu results to database
             print(f"Adding {len(ports)} Naabu results to database for subdomain ID {subdomain_id}")

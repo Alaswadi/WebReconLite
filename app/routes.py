@@ -27,13 +27,17 @@ def index():
 @main.route('/history')
 def scan_history():
     """Render the scan history page."""
+    print("Accessing scan history page")
     domains = get_domains_with_scans()
+    print(f"Found {len(domains)} domains with scan history")
     return render_template('history.html', domains=domains)
 
 @main.route('/history/domain/<int:domain_id>')
 def domain_history(domain_id):
     """Get scan history for a specific domain."""
+    print(f"Accessing domain history for domain ID: {domain_id}")
     subdomains = get_scanned_subdomains(domain_id)
+    print(f"Found {len(subdomains)} scanned subdomains for domain ID: {domain_id}")
     return jsonify({
         'subdomains': subdomains
     })
@@ -41,9 +45,21 @@ def domain_history(domain_id):
 @main.route('/history/subdomain/<int:subdomain_id>')
 def subdomain_details(subdomain_id):
     """Get detailed scan results for a specific subdomain."""
+    print(f"Accessing subdomain details for subdomain ID: {subdomain_id}")
     details = get_subdomain_details(subdomain_id)
     if not details:
+        print(f"Subdomain with ID {subdomain_id} not found")
         return jsonify({'error': 'Subdomain not found'}), 404
+    print(f"Found details for subdomain: {details.get('Subdomain')}")
+
+    # Log the scan results
+    if 'gau_results' in details:
+        print(f"GAU results: {len(details['gau_results'])} URLs")
+    if 'naabu_results' in details:
+        print(f"Naabu results: {len(details['naabu_results'])} ports")
+    if 'nuclei_results' in details:
+        print(f"Nuclei results: {len(details['nuclei_results'])} vulnerabilities")
+
     return jsonify(details)
 
 @main.route('/tools')

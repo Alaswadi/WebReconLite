@@ -18,6 +18,7 @@ show_help() {
     echo "  flower      Open Flower monitoring UI in browser"
     echo "  celery      Show Celery worker logs"
     echo "  testdb      Test the database functionality"
+    echo "  checkdb     Check the database status"
     echo "  help        Show this help message"
     echo ""
 }
@@ -93,6 +94,12 @@ test_database() {
     docker-compose exec webreconlite python test_db.py
 }
 
+# Function to check the database status
+check_database() {
+    echo "Checking database status..."
+    docker-compose exec webreconlite python check_db.py
+}
+
 # Main script logic
 case "$1" in
     build)
@@ -124,6 +131,9 @@ case "$1" in
         ;;
     testdb)
         test_database
+        ;;
+    checkdb)
+        check_database
         ;;
     help|*)
         show_help

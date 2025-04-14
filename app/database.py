@@ -17,11 +17,15 @@ def get_db_connection():
     ensure_data_dir()
     conn = None
     try:
+        print(f"Connecting to database at {DB_FILE}")
         conn = sqlite3.connect(DB_FILE)
         conn.row_factory = sqlite3.Row  # This enables column access by name
+        print(f"Successfully connected to database")
         return conn
     except Error as e:
         print(f"Error connecting to database: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def init_db():
@@ -32,7 +36,7 @@ def init_db():
 
     try:
         cursor = conn.cursor()
-        
+
         # Create DOMAINS table
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS DOMAINS (
@@ -41,7 +45,7 @@ def init_db():
             CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         ''')
-        
+
         # Create SUBDOMAINS table
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS SUBDOMAINS (
@@ -56,7 +60,7 @@ def init_db():
             UNIQUE(DomainID, Subdomain)
         )
         ''')
-        
+
         # Create GAU_TABLE
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS GAU_TABLE (
@@ -68,7 +72,7 @@ def init_db():
             UNIQUE(SID, link)
         )
         ''')
-        
+
         # Create NAABU_TABLE
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS NAABU_TABLE (
@@ -80,7 +84,7 @@ def init_db():
             UNIQUE(SID, port)
         )
         ''')
-        
+
         # Create NUCLEI_TABLE
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS NUCLEI_TABLE (
@@ -93,7 +97,7 @@ def init_db():
             FOREIGN KEY (SID) REFERENCES SUBDOMAINS(ID)
         )
         ''')
-        
+
         conn.commit()
         print("Database initialized successfully")
         return True
@@ -107,21 +111,30 @@ def init_db():
 # Domain operations
 def add_domain(domain):
     """Add a domain to the database if it doesn't exist"""
+    print(f"Adding domain to database: {domain}")
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for adding domain: {domain}")
         return None
-    
+
     try:
         cursor = conn.cursor()
+        print(f"Executing INSERT OR IGNORE for domain: {domain}")
         cursor.execute("INSERT OR IGNORE INTO DOMAINS (Domain) VALUES (?)", (domain,))
         conn.commit()
-        
+        print(f"Committed domain insert for: {domain}")
+
         # Get the domain ID (either newly inserted or existing)
+        print(f"Querying for domain ID for: {domain}")
         cursor.execute("SELECT ID FROM DOMAINS WHERE Domain = ?", (domain,))
         domain_id = cursor.fetchone()
-        return domain_id[0] if domain_id else None
+        result = domain_id[0] if domain_id else None
+        print(f"Domain ID for {domain}: {result}")
+        return result
     except Error as e:
         print(f"Error adding domain: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     finally:
         if conn:
@@ -132,7 +145,7 @@ def get_domain_id(domain):
     conn = get_db_connection()
     if conn is None:
         return None
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT ID FROM DOMAINS WHERE Domain = ?", (domain,))
@@ -148,27 +161,36 @@ def get_domain_id(domain):
 # Subdomain operations
 def add_subdomain(domain_id, subdomain):
     """Add a subdomain to the database if it doesn't exist"""
+    print(f"Adding subdomain to database: {subdomain} (Domain ID: {domain_id})")
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for adding subdomain: {subdomain}")
         return None
-    
+
     try:
         cursor = conn.cursor()
+        print(f"Executing INSERT OR IGNORE for subdomain: {subdomain}")
         cursor.execute(
             "INSERT OR IGNORE INTO SUBDOMAINS (DomainID, Subdomain) VALUES (?, ?)",
             (domain_id, subdomain)
         )
         conn.commit()
-        
+        print(f"Committed subdomain insert for: {subdomain}")
+
         # Get the subdomain ID (either newly inserted or existing)
+        print(f"Querying for subdomain ID for: {subdomain}")
         cursor.execute(
             "SELECT ID FROM SUBDOMAINS WHERE DomainID = ? AND Subdomain = ?",
             (domain_id, subdomain)
         )
         subdomain_id = cursor.fetchone()
-        return subdomain_id[0] if subdomain_id else None
+        result = subdomain_id[0] if subdomain_id else None
+        print(f"Subdomain ID for {subdomain}: {result}")
+        return result
     except Error as e:
         print(f"Error adding subdomain: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     finally:
         if conn:
@@ -179,7 +201,7 @@ def get_subdomain_id(domain_id, subdomain):
     conn = get_db_connection()
     if conn is None:
         return None
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -197,24 +219,39 @@ def get_subdomain_id(domain_id, subdomain):
 
 def update_subdomain_scan_status(subdomain_id, scan_type, status=1):
     """Update the scan status of a subdomain"""
+    print(f"Updating scan status for subdomain ID {subdomain_id}: {scan_type} = {status}")
     if scan_type not in ['GauScanned', 'NaabuScanned', 'NucleiScanned']:
         print(f"Invalid scan type: {scan_type}")
         return False
-    
+
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for updating scan status")
         return False
-    
+
     try:
         cursor = conn.cursor()
+        print(f"Executing UPDATE for subdomain ID {subdomain_id}: {scan_type} = {status}")
         cursor.execute(
             f"UPDATE SUBDOMAINS SET {scan_type} = ? WHERE ID = ?",
             (status, subdomain_id)
         )
         conn.commit()
-        return True
+        print(f"Committed scan status update for subdomain ID {subdomain_id}")
+
+        # Verify the update was successful
+        cursor.execute(f"SELECT {scan_type} FROM SUBDOMAINS WHERE ID = ?", (subdomain_id,))
+        result = cursor.fetchone()
+        if result and result[0] == status:
+            print(f"Verified scan status update for subdomain ID {subdomain_id}: {scan_type} = {result[0]}")
+            return True
+        else:
+            print(f"Failed to verify scan status update for subdomain ID {subdomain_id}")
+            return False
     except Error as e:
         print(f"Error updating subdomain scan status: {e}")
+        import traceback
+        traceback.print_exc()
         return False
     finally:
         if conn:
@@ -226,7 +263,7 @@ def add_gau_result(subdomain_id, link):
     conn = get_db_connection()
     if conn is None:
         return False
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -246,11 +283,11 @@ def add_gau_results_batch(subdomain_id, links):
     """Add multiple GAU results to the database in a batch"""
     if not links:
         return True
-    
+
     conn = get_db_connection()
     if conn is None:
         return False
-    
+
     try:
         cursor = conn.cursor()
         # Prepare data for batch insert
@@ -274,7 +311,7 @@ def add_naabu_result(subdomain_id, port):
     conn = get_db_connection()
     if conn is None:
         return False
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -294,11 +331,11 @@ def add_naabu_results_batch(subdomain_id, ports):
     """Add multiple NAABU results to the database in a batch"""
     if not ports:
         return True
-    
+
     conn = get_db_connection()
     if conn is None:
         return False
-    
+
     try:
         cursor = conn.cursor()
         # Prepare data for batch insert
@@ -322,7 +359,7 @@ def add_nuclei_result(subdomain_id, vulnerability, severity=None, details=None):
     conn = get_db_connection()
     if conn is None:
         return False
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -341,12 +378,30 @@ def add_nuclei_result(subdomain_id, vulnerability, severity=None, details=None):
 # Query operations for the scan history page
 def get_domains_with_scans():
     """Get all domains that have at least one scanned subdomain"""
+    print("Getting domains with scans...")
     conn = get_db_connection()
     if conn is None:
+        print("Failed to get database connection for getting domains with scans")
         return []
-    
+
     try:
         cursor = conn.cursor()
+
+        # First, check if there are any domains in the database
+        cursor.execute("SELECT COUNT(*) FROM DOMAINS")
+        domain_count = cursor.fetchone()[0]
+        print(f"Total domains in database: {domain_count}")
+
+        # Then check if there are any subdomains with scans
+        cursor.execute("""
+            SELECT COUNT(*) FROM SUBDOMAINS
+            WHERE GauScanned = 1 OR NaabuScanned = 1 OR NucleiScanned = 1
+        """)
+        scanned_count = cursor.fetchone()[0]
+        print(f"Total subdomains with scans: {scanned_count}")
+
+        # Now get the domains with scans
+        print("Executing query to get domains with scans...")
         cursor.execute("""
             SELECT DISTINCT d.ID, d.Domain
             FROM DOMAINS d
@@ -354,9 +409,18 @@ def get_domains_with_scans():
             WHERE s.GauScanned = 1 OR s.NaabuScanned = 1 OR s.NucleiScanned = 1
             ORDER BY d.Domain
         """)
-        return [dict(row) for row in cursor.fetchall()]
+        results = [dict(row) for row in cursor.fetchall()]
+        print(f"Found {len(results)} domains with scans")
+
+        # Print the domains found
+        for domain in results:
+            print(f"  - Domain: {domain['Domain']} (ID: {domain['ID']})")
+
+        return results
     except Error as e:
         print(f"Error getting domains with scans: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -364,21 +428,52 @@ def get_domains_with_scans():
 
 def get_scanned_subdomains(domain_id):
     """Get all scanned subdomains for a domain"""
+    print(f"Getting scanned subdomains for domain ID: {domain_id}")
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for getting scanned subdomains")
         return []
-    
+
     try:
         cursor = conn.cursor()
+
+        # First, check if the domain exists
+        cursor.execute("SELECT Domain FROM DOMAINS WHERE ID = ?", (domain_id,))
+        domain_result = cursor.fetchone()
+        if domain_result:
+            print(f"Found domain: {domain_result['Domain']}")
+        else:
+            print(f"Domain with ID {domain_id} not found")
+            return []
+
+        # Then check if there are any subdomains for this domain
+        cursor.execute("SELECT COUNT(*) FROM SUBDOMAINS WHERE DomainID = ?", (domain_id,))
+        subdomain_count = cursor.fetchone()[0]
+        print(f"Total subdomains for domain ID {domain_id}: {subdomain_count}")
+
+        # Now get the scanned subdomains
+        print(f"Executing query to get scanned subdomains for domain ID {domain_id}...")
         cursor.execute("""
             SELECT ID, Subdomain, GauScanned, NaabuScanned, NucleiScanned
             FROM SUBDOMAINS
             WHERE DomainID = ? AND (GauScanned = 1 OR NaabuScanned = 1 OR NucleiScanned = 1)
             ORDER BY Subdomain
         """, (domain_id,))
-        return [dict(row) for row in cursor.fetchall()]
+        results = [dict(row) for row in cursor.fetchall()]
+        print(f"Found {len(results)} scanned subdomains for domain ID {domain_id}")
+
+        # Print the subdomains found
+        for subdomain in results:
+            print(f"  - Subdomain: {subdomain['Subdomain']} (ID: {subdomain['ID']})")
+            print(f"    GAU: {'Scanned' if subdomain['GauScanned'] else 'Not Scanned'}")
+            print(f"    Naabu: {'Scanned' if subdomain['NaabuScanned'] else 'Not Scanned'}")
+            print(f"    Nuclei: {'Scanned' if subdomain['NucleiScanned'] else 'Not Scanned'}")
+
+        return results
     except Error as e:
         print(f"Error getting scanned subdomains: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -386,21 +481,41 @@ def get_scanned_subdomains(domain_id):
 
 def get_gau_results(subdomain_id):
     """Get all GAU results for a subdomain"""
+    print(f"Getting GAU results for subdomain ID: {subdomain_id}")
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for GAU results")
         return []
-    
+
     try:
         cursor = conn.cursor()
+
+        # First check if there are any GAU results for this subdomain
+        cursor.execute("SELECT COUNT(*) FROM GAU_TABLE WHERE SID = ?", (subdomain_id,))
+        count = cursor.fetchone()[0]
+        print(f"Found {count} GAU results for subdomain ID: {subdomain_id}")
+
+        # Get the GAU results
         cursor.execute("""
             SELECT link
             FROM GAU_TABLE
             WHERE SID = ?
             ORDER BY link
         """, (subdomain_id,))
-        return [row['link'] for row in cursor.fetchall()]
+        results = [row['link'] for row in cursor.fetchall()]
+
+        # Print a sample of the results
+        if results:
+            sample = results[:3] if len(results) > 3 else results
+            print(f"Sample GAU results: {sample}")
+            if len(results) > 3:
+                print(f"... and {len(results) - 3} more")
+
+        return results
     except Error as e:
         print(f"Error getting GAU results: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -408,21 +523,38 @@ def get_gau_results(subdomain_id):
 
 def get_naabu_results(subdomain_id):
     """Get all NAABU results for a subdomain"""
+    print(f"Getting Naabu results for subdomain ID: {subdomain_id}")
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for Naabu results")
         return []
-    
+
     try:
         cursor = conn.cursor()
+
+        # First check if there are any Naabu results for this subdomain
+        cursor.execute("SELECT COUNT(*) FROM NAABU_TABLE WHERE SID = ?", (subdomain_id,))
+        count = cursor.fetchone()[0]
+        print(f"Found {count} Naabu results for subdomain ID: {subdomain_id}")
+
+        # Get the Naabu results
         cursor.execute("""
             SELECT port
             FROM NAABU_TABLE
             WHERE SID = ?
             ORDER BY port
         """, (subdomain_id,))
-        return [row['port'] for row in cursor.fetchall()]
+        results = [row['port'] for row in cursor.fetchall()]
+
+        # Print the results
+        if results:
+            print(f"Naabu results (ports): {results}")
+
+        return results
     except Error as e:
-        print(f"Error getting NAABU results: {e}")
+        print(f"Error getting Naabu results: {e}")
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -433,7 +565,7 @@ def get_nuclei_results(subdomain_id):
     conn = get_db_connection()
     if conn is None:
         return []
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute("""
@@ -452,39 +584,54 @@ def get_nuclei_results(subdomain_id):
 
 def get_subdomain_details(subdomain_id):
     """Get detailed information about a subdomain including scan results"""
+    print(f"Getting details for subdomain ID: {subdomain_id}")
     conn = get_db_connection()
     if conn is None:
+        print(f"Failed to get database connection for subdomain details")
         return None
-    
+
     try:
         cursor = conn.cursor()
         # Get subdomain info
+        print(f"Executing query to get subdomain info for ID: {subdomain_id}")
         cursor.execute("""
             SELECT s.ID, s.Subdomain, s.GauScanned, s.NaabuScanned, s.NucleiScanned, d.Domain
             FROM SUBDOMAINS s
             JOIN DOMAINS d ON s.DomainID = d.ID
             WHERE s.ID = ?
         """, (subdomain_id,))
-        subdomain = dict(cursor.fetchone() or {})
-        
-        if not subdomain:
+        result = cursor.fetchone()
+        if result:
+            subdomain = dict(result)
+            print(f"Found subdomain: {subdomain['Subdomain']} (Domain: {subdomain['Domain']})")
+            print(f"Scan status: GAU={subdomain['GauScanned']}, Naabu={subdomain['NaabuScanned']}, Nuclei={subdomain['NucleiScanned']}")
+        else:
+            print(f"No subdomain found with ID: {subdomain_id}")
             return None
-        
+
         # Get GAU results if scanned
         if subdomain.get('GauScanned'):
+            print(f"Getting GAU results for subdomain ID: {subdomain_id}")
             subdomain['gau_results'] = get_gau_results(subdomain_id)
-        
+            print(f"Found {len(subdomain['gau_results'])} GAU results")
+
         # Get NAABU results if scanned
         if subdomain.get('NaabuScanned'):
+            print(f"Getting Naabu results for subdomain ID: {subdomain_id}")
             subdomain['naabu_results'] = get_naabu_results(subdomain_id)
-        
+            print(f"Found {len(subdomain['naabu_results'])} Naabu results")
+
         # Get NUCLEI results if scanned
         if subdomain.get('NucleiScanned'):
+            print(f"Getting Nuclei results for subdomain ID: {subdomain_id}")
             subdomain['nuclei_results'] = get_nuclei_results(subdomain_id)
-        
+            print(f"Found {len(subdomain['nuclei_results'])} Nuclei results")
+
         return subdomain
     except Error as e:
         print(f"Error getting subdomain details: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     finally:
         if conn:

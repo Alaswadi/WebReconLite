@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 import os
 import sys
 from dotenv import load_dotenv
@@ -63,6 +63,46 @@ def create_app():
                 'SECRET_KEY': app.config['SECRET_KEY'][:5] + '...',
             }
         }
+
+    @app.route('/db-status')
+    def db_status():
+        """Check the status of the database."""
+        import sqlite3
+        from app.database import DB_FILE, get_db_connection
+
+        # Check if the database file exists
+        db_exists = os.path.exists(DB_FILE)
+
+        # Try to connect to the database
+        conn = get_db_connection()
+        connection_successful = conn is not None
+
+        # Get table counts
+        table_counts = {}
+        if connection_successful:
+            try:
+                cursor = conn.cursor()
+
+                # Get list of tables
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [row['name'] for row in cursor.fetchall()]
+
+                # Get count for each table
+                for table in tables:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                    table_counts[table] = cursor.fetchone()[0]
+
+                # Close the connection
+                conn.close()
+            except Exception as e:
+                table_counts['error'] = str(e)
+
+        return jsonify({
+            'db_file': DB_FILE,
+            'db_exists': db_exists,
+            'connection_successful': connection_successful,
+            'table_counts': table_counts
+        })
 
     # Celery is initialized in celery_app.py
     # We'll set up Flask app context for Celery tasks in celery_worker.py

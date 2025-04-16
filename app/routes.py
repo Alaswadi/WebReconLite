@@ -460,14 +460,22 @@ def run_scan(domain, session_id, scan_dir):
             parsed_url = urlparse(host['url'])
             hostname = parsed_url.netloc
 
+            # Extract status code and technology from host data
+            status_code = host.get('status_code', None)
+            technology = host.get('tech', None)
+
             # Get subdomain ID
             subdomain_id = get_subdomain_id(domain_id, hostname)
             if not subdomain_id:
-                print(f"run_scan: Subdomain {hostname} not found in database, adding it")
-                subdomain_id = add_subdomain(domain_id, hostname)
+                print(f"run_scan: Subdomain {hostname} not found in database, adding it with status {status_code} and tech {technology}")
+                subdomain_id = add_subdomain(domain_id, hostname, status_code, technology)
                 if not subdomain_id:
                     print(f"run_scan: Failed to add subdomain {hostname} to database")
                     continue
+            else:
+                # Update existing subdomain with status code and technology
+                print(f"run_scan: Updating subdomain {hostname} with status {status_code} and tech {technology}")
+                update_subdomain_info(subdomain_id, status_code, technology)
 
             print(f"run_scan: Stored subdomain {hostname} (ID: {subdomain_id}) in database")
             # Note: We're not marking the subdomain as scanned or storing any URLs/ports

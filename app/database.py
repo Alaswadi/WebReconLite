@@ -52,6 +52,8 @@ def init_db():
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             DomainID INTEGER NOT NULL,
             Subdomain VARCHAR(255) NOT NULL,
+            StatusCode VARCHAR(10),
+            Technology VARCHAR(255),
             GauScanned INTEGER DEFAULT 0,
             NaabuScanned INTEGER DEFAULT 0,
             NucleiScanned INTEGER DEFAULT 0,
@@ -159,9 +161,9 @@ def get_domain_id(domain):
             conn.close()
 
 # Subdomain operations
-def add_subdomain(domain_id, subdomain):
+def add_subdomain(domain_id, subdomain, status_code=None, technology=None):
     """Add a subdomain to the database if it doesn't exist"""
-    print(f"Adding subdomain to database: {subdomain} (Domain ID: {domain_id})")
+    print(f"Adding subdomain to database: {subdomain} (Domain ID: {domain_id}, Status: {status_code}, Tech: {technology})")
     conn = get_db_connection()
     if conn is None:
         print(f"Failed to get database connection for adding subdomain: {subdomain}")
@@ -171,8 +173,8 @@ def add_subdomain(domain_id, subdomain):
         cursor = conn.cursor()
         print(f"Executing INSERT OR IGNORE for subdomain: {subdomain}")
         cursor.execute(
-            "INSERT OR IGNORE INTO SUBDOMAINS (DomainID, Subdomain) VALUES (?, ?)",
-            (domain_id, subdomain)
+            "INSERT OR IGNORE INTO SUBDOMAINS (DomainID, Subdomain, StatusCode, Technology) VALUES (?, ?, ?, ?)",
+            (domain_id, subdomain, status_code, technology)
         )
         conn.commit()
         print(f"Committed subdomain insert for: {subdomain}")
@@ -250,6 +252,61 @@ def update_subdomain_scan_status(subdomain_id, scan_type, status=1):
             return False
     except Error as e:
         print(f"Error updating subdomain scan status: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def update_subdomain_info(subdomain_id, status_code=None, technology=None):
+    """Update the status code and technology information for a subdomain"""
+    print(f"Updating info for subdomain ID {subdomain_id}: Status={status_code}, Tech={technology}")
+
+    conn = get_db_connection()
+    if conn is None:
+        print(f"Failed to get database connection for updating subdomain info")
+        return False
+
+    try:
+        cursor = conn.cursor()
+
+        # Build the update query based on which fields are provided
+        update_fields = []
+        params = []
+
+        if status_code is not None:
+            update_fields.append("StatusCode = ?")
+            params.append(status_code)
+
+        if technology is not None:
+            update_fields.append("Technology = ?")
+            params.append(technology)
+
+        if not update_fields:
+            print("No fields to update")
+            return True
+
+        # Add the subdomain ID to the parameters
+        params.append(subdomain_id)
+
+        # Execute the update query
+        query = f"UPDATE SUBDOMAINS SET {', '.join(update_fields)} WHERE ID = ?"
+        print(f"Executing query: {query} with params: {params}")
+        cursor.execute(query, params)
+        conn.commit()
+
+        # Verify the update was successful
+        cursor.execute("SELECT StatusCode, Technology FROM SUBDOMAINS WHERE ID = ?", (subdomain_id,))
+        result = cursor.fetchone()
+        if result:
+            print(f"Updated subdomain info: Status={result['StatusCode']}, Tech={result['Technology']}")
+            return True
+        else:
+            print(f"Failed to verify subdomain info update for ID {subdomain_id}")
+            return False
+    except Error as e:
+        print(f"Error updating subdomain info: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -466,7 +523,7 @@ def get_scanned_subdomains(domain_id):
         # Now get all subdomains for this domain
         print(f"Executing query to get all subdomains for domain ID {domain_id}...")
         cursor.execute("""
-            SELECT ID, Subdomain, GauScanned, NaabuScanned, NucleiScanned
+            SELECT ID, Subdomain, StatusCode, Technology, GauScanned, NaabuScanned, NucleiScanned
             FROM SUBDOMAINS
             WHERE DomainID = ?
             ORDER BY Subdomain

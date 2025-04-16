@@ -227,6 +227,14 @@
                             html += `
                                 <li class="list-group-item subdomain-item" data-subdomain-id="${subdomain.ID}">
                                     <div class="subdomain-name">${subdomain.Subdomain}</div>
+                                    <div class="subdomain-info">
+                                        <span class="status-code ${getStatusClass(subdomain.StatusCode)}">
+                                            Status: ${subdomain.StatusCode || 'Unknown'}
+                                        </span>
+                                        <span class="technology">
+                                            Tech: ${subdomain.Technology || 'Unknown'}
+                                        </span>
+                                    </div>
                                     <div class="scan-actions">
                                         <button class="btn btn-sm ${subdomain.GauScanned ? 'btn-success' : 'btn-primary'} gau-btn"
                                                 data-url="https://${subdomain.Subdomain}"
@@ -506,6 +514,21 @@
 
             return 'bg-secondary';
         }
+
+        // Helper function to get status code class
+        function getStatusClass(statusCode) {
+            if (!statusCode || statusCode === 'Unknown') return 'status-unknown';
+
+            const code = parseInt(statusCode);
+            if (isNaN(code)) return 'status-unknown';
+
+            if (code >= 200 && code < 300) return 'status-success';
+            if (code >= 300 && code < 400) return 'status-redirect';
+            if (code >= 400 && code < 500) return 'status-client-error';
+            if (code >= 500 && code < 600) return 'status-server-error';
+
+            return 'status-unknown';
+        }
     });
 </script>
 
@@ -555,6 +578,51 @@
         font-weight: bold;
         font-size: 1.1em;
         color: #00aaff;
+    }
+
+    .subdomain-info {
+        display: flex;
+        gap: 15px;
+        margin-top: 5px;
+        font-size: 0.9em;
+    }
+
+    .status-code {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .status-success {
+        background-color: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+    }
+
+    .status-redirect {
+        background-color: rgba(0, 170, 255, 0.2);
+        color: #00aaff;
+    }
+
+    .status-client-error {
+        background-color: rgba(255, 102, 102, 0.2);
+        color: #ff6666;
+    }
+
+    .status-server-error {
+        background-color: rgba(255, 51, 51, 0.2);
+        color: #ff3333;
+    }
+
+    .status-unknown {
+        background-color: rgba(170, 170, 170, 0.2);
+        color: #aaaaaa;
+    }
+
+    .technology {
+        color: #00ffcc;
+        background-color: rgba(0, 255, 204, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
     }
 
     .scan-actions {

@@ -156,6 +156,10 @@ fi
 echo "Checking installed tools..."
 /usr/local/bin/check-tools.sh
 
+# Initialize the database if it doesn't exist
+echo "Initializing database..."
+cd /app && python -m app.init_db
+
 # Start Gunicorn
 echo "Starting Gunicorn..."
 exec gunicorn --bind 0.0.0.0:8001 --workers 4 --timeout 120 --log-level debug wsgi:app

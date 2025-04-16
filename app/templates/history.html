@@ -221,7 +221,16 @@
                     const container = document.getElementById('subdomains-container');
 
                     if (data.subdomains && data.subdomains.length > 0) {
-                        let html = '<ul class="list-group subdomain-list">';
+                        // Add filter input
+                        let html = `
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="subdomain-filter"
+                                           placeholder="Filter subdomains by name, status, or technology...">
+                                    <span class="input-group-text" id="subdomain-count">${data.subdomains.length} subdomains</span>
+                                </div>
+                            </div>
+                            <ul class="list-group subdomain-list">`;
 
                         data.subdomains.forEach(subdomain => {
                             html += `
@@ -264,6 +273,43 @@
 
                         html += '</ul>';
                         container.innerHTML = html;
+
+                        // Add filter functionality
+                        const subdomainFilter = document.getElementById('subdomain-filter');
+                        if (subdomainFilter) {
+                            subdomainFilter.addEventListener('input', function() {
+                                const filterValue = this.value.toLowerCase();
+                                const subdomainItems = document.querySelectorAll('.subdomain-item');
+                                let visibleCount = 0;
+
+                                subdomainItems.forEach(item => {
+                                    const subdomainName = item.querySelector('.subdomain-name').textContent.toLowerCase();
+                                    const statusCode = item.querySelector('.status-code').textContent.toLowerCase();
+                                    const technology = item.querySelector('.technology').textContent.toLowerCase();
+
+                                    // Check if any of the fields match the filter
+                                    if (subdomainName.includes(filterValue) ||
+                                        statusCode.includes(filterValue) ||
+                                        technology.includes(filterValue)) {
+                                        item.style.display = 'flex';
+                                        visibleCount++;
+                                    } else {
+                                        item.style.display = 'none';
+                                    }
+                                });
+
+                                // Update the counter
+                                const subdomainCount = document.getElementById('subdomain-count');
+                                if (subdomainCount) {
+                                    const totalCount = subdomainItems.length;
+                                    if (filterValue) {
+                                        subdomainCount.textContent = `${visibleCount} of ${totalCount} subdomains`;
+                                    } else {
+                                        subdomainCount.textContent = `${totalCount} subdomains`;
+                                    }
+                                }
+                            });
+                        }
 
                         // Add click event to subdomain items
                         const subdomainItems = document.querySelectorAll('.subdomain-item');
@@ -550,6 +596,29 @@
     .domain-list, .subdomain-list {
         max-height: 400px;
         overflow-y: auto;
+    }
+
+    #subdomain-filter {
+        background-color: #2a2a2a;
+        border: 1px solid #3a3a3a;
+        color: #e0e0e0;
+    }
+
+    #subdomain-filter:focus {
+        background-color: #333;
+        border-color: #00aaff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 170, 255, 0.25);
+    }
+
+    #subdomain-count {
+        background-color: #3a3a3a;
+        border: 1px solid #4a4a4a;
+        color: #00aaff;
+        font-weight: bold;
+    }
+
+    .input-group {
+        display: flex;
     }
 
     .domain-item, .subdomain-item {

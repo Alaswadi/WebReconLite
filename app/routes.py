@@ -9,8 +9,8 @@ from app.tools import run_subdomain_enumeration, run_web_detection, get_tool_sta
 from app.utils import validate_domain
 from app.tasks import run_scan_task, run_gau_task, run_naabu_task
 from app.database import (add_domain, add_subdomain, update_subdomain_scan_status,
-                         add_gau_results_batch, add_naabu_results_batch, get_domain_id,
-                         get_subdomain_id, get_domains_with_scans, get_scanned_subdomains,
+                         update_subdomain_info, add_gau_results_batch, add_naabu_results_batch,
+                         get_domain_id, get_subdomain_id, get_domains_with_scans, get_scanned_subdomains,
                          get_subdomain_details, get_gau_results, get_naabu_results)
 
 # Create blueprint
@@ -462,7 +462,7 @@ def run_scan(domain, session_id, scan_dir):
 
             # Extract status code and technology from host data
             status_code = host.get('status_code', None)
-            technology = host.get('tech', None)
+            technology = host.get('technology', None)
 
             # Get subdomain ID
             subdomain_id = get_subdomain_id(domain_id, hostname)

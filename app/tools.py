@@ -34,6 +34,18 @@ def run_tool(tool_name, command, output_file=None, timeout=300):
     tool_cmd = command.split()[0]
     if not check_tool_installed(tool_cmd) and tool_cmd not in ['python', 'python3']:
         print(f"run_tool: Warning: {tool_cmd} not found in PATH")
+        # Print the PATH for debugging
+        print(f"run_tool: PATH: {os.environ.get('PATH', '')}")
+        # Try to find the tool in common locations
+        common_locations = ['/usr/bin', '/usr/local/bin', '/bin', '/opt/homebrew/bin', '/go/bin']
+        for location in common_locations:
+            tool_path = os.path.join(location, tool_cmd)
+            if os.path.exists(tool_path):
+                print(f"run_tool: Found {tool_cmd} at {tool_path}")
+                break
+        else:
+            print(f"run_tool: Could not find {tool_cmd} in common locations")
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(f"# Tool {tool_cmd} not installed or not found in PATH\n")
@@ -42,13 +54,24 @@ def run_tool(tool_name, command, output_file=None, timeout=300):
     try:
         # Start the process
         print(f"run_tool: Starting process for {tool_name}")
+        # Create a copy of the environment with PATH including common locations
+        env = os.environ.copy()
+        # Add common tool locations to PATH if they're not already there
+        common_locations = ['/usr/bin', '/usr/local/bin', '/bin', '/opt/homebrew/bin', '/go/bin']
+        path = env.get('PATH', '')
+        for location in common_locations:
+            if location not in path:
+                path = f"{location}:{path}"
+        env['PATH'] = path
+        print(f"run_tool: Using PATH: {env['PATH']}")
+
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE if output_file else None,
             stderr=subprocess.PIPE,
             text=True,
             shell=True,
-            env=os.environ.copy()  # Pass current environment variables to the subprocess
+            env=env  # Pass modified environment variables to the subprocess
         )
         print(f"run_tool: Process started with PID: {process.pid}")
 
@@ -56,6 +79,8 @@ def run_tool(tool_name, command, output_file=None, timeout=300):
         print(f"run_tool: Waiting for process to complete (timeout: {timeout}s)")
         stdout, stderr = process.communicate(timeout=timeout)
         print(f"run_tool: Process completed with return code: {process.returncode}")
+        if stderr:
+            print(f"run_tool: Process stderr: {stderr}")
 
         # Check if the process was successful
         if process.returncode != 0:
@@ -223,6 +248,16 @@ def run_gau(domain, output_file):
         # Check again
         if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
             print(f"GAU succeeded with -output flag")
+            return result
+
+        # Try with additional parameters
+        print("Trying with additional parameters")
+        command = f"gau --threads 50 --retries 15 --blacklist png,jpg,gif,jpeg,css,js {domain} -o {output_file}"
+        result = run_tool("Gau", command)
+
+        # Check again
+        if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            print(f"GAU succeeded with additional parameters")
             return result
 
         # If all else fails, try waybackurls as an alternative

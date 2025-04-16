@@ -73,6 +73,7 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM fully loaded and parsed');
         // We don't need the getSessionId function anymore
 
         // Function to run GAU scan
@@ -180,34 +181,47 @@
                 alert('Error running port scan. Please try again.');
             });
         }
-        // Domain selection
-        const domainItems = document.querySelectorAll('.domain-item');
-        domainItems.forEach(item => {
-            item.addEventListener('click', function() {
-                // Clear previous selection
-                domainItems.forEach(i => i.classList.remove('active'));
+        // Function to initialize domain click events
+        function initDomainClickEvents() {
+            console.log('Initializing domain click events');
+            const domainItems = document.querySelectorAll('.domain-item');
+            console.log(`Found ${domainItems.length} domain items`);
 
-                // Mark this item as active
-                this.classList.add('active');
+            domainItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    console.log('Domain item clicked');
+                    // Clear previous selection
+                    domainItems.forEach(i => i.classList.remove('active'));
 
-                // Get domain ID and name
-                const domainId = this.getAttribute('data-domain-id');
-                const domainName = this.textContent.trim();
+                    // Mark this item as active
+                    this.classList.add('active');
 
-                // Update selected domain display
-                document.getElementById('selected-domain').textContent = ` - ${domainName}`;
+                    // Get domain ID and name
+                    const domainId = this.getAttribute('data-domain-id');
+                    const domainName = this.textContent.trim();
+                    console.log(`Selected domain: ${domainName} (ID: ${domainId})`);
 
-                // Hide subdomain details
-                document.querySelector('.subdomain-details-card').style.display = 'none';
+                    // Update selected domain display
+                    document.getElementById('selected-domain').textContent = ` - ${domainName}`;
 
-                // Show loading indicator
-                document.getElementById('subdomains-loading').style.display = 'flex';
-                document.getElementById('subdomains-container').innerHTML = '';
+                    // Hide subdomain details
+                    document.querySelector('.subdomain-details-card').style.display = 'none';
 
-                // Fetch subdomains for this domain
-                fetchSubdomains(domainId);
+                    // Show loading indicator
+                    document.getElementById('subdomains-loading').style.display = 'flex';
+                    document.getElementById('subdomains-container').innerHTML = '';
+
+                    // Fetch subdomains for this domain
+                    fetchSubdomains(domainId);
+                });
             });
-        });
+        }
+
+        // Initialize domain click events when the page loads
+        // Add a small delay to ensure all elements are fully loaded
+        setTimeout(function() {
+            initDomainClickEvents();
+        }, 100);
 
         // Function to fetch subdomains for a domain
         function fetchSubdomains(domainId) {
@@ -742,16 +756,49 @@
         color: #e0e0e0;
         border: 1px solid #3a3a3a;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+    }
+
+    .domain-item {
+        position: relative;
+        padding-left: 25px;
+        border-left: 4px solid transparent;
+    }
+
+    .domain-item::before {
+        content: '\25B6';
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%) scale(0.8);
+        color: #00aaff;
+        opacity: 0;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .domain-item:hover::before {
+        opacity: 0.7;
+    }
+
+    .domain-item.active::before {
+        opacity: 1;
     }
 
     .domain-item:hover, .subdomain-item:hover {
         background-color: #3a3a3a;
     }
 
+    .domain-item:hover {
+        border-left-color: #0088cc;
+    }
+
     .domain-item.active, .subdomain-item.active {
         background-color: #4a4a4a;
         border-left: 4px solid #00aaff;
+    }
+
+    .domain-item.active {
+        color: #00aaff;
     }
 
     .subdomain-item {

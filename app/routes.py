@@ -156,10 +156,9 @@ def run_gau_for_host():
 
         # We'll update the status file in the Celery task
 
-        # Mark the subdomain as scanned immediately
+        # The subdomain will be marked as scanned by the Celery task
         print(f"Using subdomain_id: {subdomain_id} for the GAU task")
-        update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
-        print(f"Marked subdomain ID {subdomain_id} as scanned by GAU")
+        print(f"Subdomain ID {subdomain_id} will be marked as scanned when the GAU task completes")
 
         # Add GAU results to database when the task completes
         # This will be handled by a separate process that polls for completed tasks
@@ -263,10 +262,9 @@ def run_naabu_for_host():
 
         # We'll update the status file in the Celery task
 
-        # Mark the subdomain as scanned immediately
+        # The subdomain will be marked as scanned by the Celery task
         print(f"Using subdomain_id: {subdomain_id} for the Naabu task")
-        update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
-        print(f"Marked subdomain ID {subdomain_id} as scanned by Naabu")
+        print(f"Subdomain ID {subdomain_id} will be marked as scanned when the Naabu task completes")
 
         # Add Naabu results to database when the task completes
         # This will be handled by a separate process that polls for completed tasks

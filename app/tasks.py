@@ -172,7 +172,7 @@ def run_gau_task(self, domain, output_file):
         output_file (str): The file to save results to
     """
     try:
-        from app.database import get_domain_id, get_subdomain_id, add_gau_results_batch
+        from app.database import get_domain_id, get_subdomain_id, add_gau_results_batch, update_subdomain_scan_status
 
         self.update_state(state='PROGRESS', meta={'status': 'Running Gau...'})
         print(f"Celery task: Running GAU for {domain}, output file: {output_file}")
@@ -192,7 +192,9 @@ def run_gau_task(self, domain, output_file):
                 # Store results in the database
                 print(f"Celery task: Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
                 add_gau_results_batch(subdomain_id, urls)
-                print(f"Celery task: Successfully added GAU results to database")
+                # Mark the subdomain as scanned
+                update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
+                print(f"Celery task: Successfully added GAU results to database and marked subdomain as scanned")
 
         return {
             'status': 'completed',
@@ -217,7 +219,7 @@ def run_naabu_task(self, domain, output_file):
         output_file (str): The file to save results to
     """
     try:
-        from app.database import get_domain_id, get_subdomain_id, add_naabu_results_batch
+        from app.database import get_domain_id, get_subdomain_id, add_naabu_results_batch, update_subdomain_scan_status
 
         self.update_state(state='PROGRESS', meta={'status': 'Running Naabu...'})
         print(f"Celery task: Running Naabu for {domain}, output file: {output_file}")
@@ -239,7 +241,9 @@ def run_naabu_task(self, domain, output_file):
                 # Extract port numbers from the port objects
                 port_numbers = [int(port['port']) for port in ports]
                 add_naabu_results_batch(subdomain_id, port_numbers)
-                print(f"Celery task: Successfully added Naabu results to database")
+                # Mark the subdomain as scanned
+                update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
+                print(f"Celery task: Successfully added Naabu results to database and marked subdomain as scanned")
 
         return {
             'status': 'completed',

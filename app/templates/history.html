@@ -221,49 +221,49 @@
                     const container = document.getElementById('subdomains-container');
 
                     if (data.subdomains && data.subdomains.length > 0) {
-                        let html = '<ul class="list-group subdomain-list">';
+                        // Add filter section
+                        let filterHtml = `
+                            <div class="filter-section">
+                                <div class="filter-header">
+                                    <h5>Filter Subdomains</h5>
+                                    <span class="filter-count">${data.subdomains.length} subdomains</span>
+                                </div>
+                                <div class="filter-inputs">
+                                    <div class="input-group">
+                                        <input type="text" id="subdomain-filter" class="form-control" placeholder="Filter by subdomain..." />
+                                        <input type="text" id="tech-filter" class="form-control" placeholder="Filter by technology..." />
+                                        <select id="status-filter" class="form-select">
+                                            <option value="">All Status Codes</option>
+                                            <option value="2">2xx (Success)</option>
+                                            <option value="3">3xx (Redirect)</option>
+                                            <option value="4">4xx (Client Error)</option>
+                                            <option value="5">5xx (Server Error)</option>
+                                        </select>
+                                        <button id="clear-filters" class="btn btn-secondary">Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML = filterHtml;
 
-                        data.subdomains.forEach(subdomain => {
-                            html += `
-                                <li class="list-group-item subdomain-item" data-subdomain-id="${subdomain.ID}">
-                                    <div class="subdomain-name">${subdomain.Subdomain}</div>
-                                    <div class="subdomain-info">
-                                        <span class="status-code ${getStatusClass(subdomain.StatusCode)}">
-                                            Status: ${subdomain.StatusCode || 'Unknown'}
-                                        </span>
-                                        <span class="technology">
-                                            Tech: ${subdomain.Technology || 'Unknown'}
-                                        </span>
-                                    </div>
-                                    <div class="scan-actions">
-                                        <button class="btn btn-sm ${subdomain.GauScanned ? 'btn-success' : 'btn-primary'} gau-btn"
-                                                data-url="https://${subdomain.Subdomain}"
-                                                title="${subdomain.GauScanned ? 'GAU already scanned' : 'Run GAU scan'}">
-                                            ${subdomain.GauScanned ? 'GAU ✓' : 'Run GAU'}
-                                        </button>
-                                        <button class="btn btn-sm ${subdomain.NaabuScanned ? 'btn-success' : 'btn-primary'} naabu-btn"
-                                                data-url="https://${subdomain.Subdomain}"
-                                                title="${subdomain.NaabuScanned ? 'Ports already scanned' : 'Scan ports'}">
-                                            ${subdomain.NaabuScanned ? 'Ports ✓' : 'Scan Ports'}
-                                        </button>
-                                    </div>
-                                    <div class="scan-status">
-                                        <span class="badge ${subdomain.GauScanned ? 'bg-success' : 'bg-secondary'}">
-                                            GAU: ${subdomain.GauScanned ? 'Scanned' : 'Not Scanned'}
-                                        </span>
-                                        <span class="badge ${subdomain.NaabuScanned ? 'bg-success' : 'bg-secondary'}">
-                                            Naabu: ${subdomain.NaabuScanned ? 'Scanned' : 'Not Scanned'}
-                                        </span>
-                                        <span class="badge ${subdomain.NucleiScanned ? 'bg-success' : 'bg-secondary'}">
-                                            Nuclei: ${subdomain.NucleiScanned ? 'Scanned' : 'Not Scanned'}
-                                        </span>
-                                    </div>
-                                </li>
-                            `;
-                        });
+                        // Create a div to hold the subdomain list
+                        const subdomainListContainer = document.createElement('div');
+                        subdomainListContainer.id = 'subdomain-list-container';
+                        container.appendChild(subdomainListContainer);
 
-                        html += '</ul>';
-                        container.innerHTML = html;
+                        // Store the original subdomains data for filtering
+                        window.allSubdomains = data.subdomains;
+
+                        // Render the subdomain list
+                        renderSubdomainList(data.subdomains);
+
+                        // Add event listeners for filters
+                        document.getElementById('subdomain-filter').addEventListener('input', applyFilters);
+                        document.getElementById('tech-filter').addEventListener('input', applyFilters);
+                        document.getElementById('status-filter').addEventListener('change', applyFilters);
+                        document.getElementById('clear-filters').addEventListener('click', clearFilters);
+                    } else {
+                        container.innerHTML = '<p class="no-subdomains">No subdomains found for this domain.</p>';
 
                         // Add click event to subdomain items
                         const subdomainItems = document.querySelectorAll('.subdomain-item');
@@ -529,6 +529,193 @@
 
             return 'status-unknown';
         }
+
+        // Function to render the subdomain list
+        function renderSubdomainList(subdomains) {
+            const container = document.getElementById('subdomain-list-container');
+
+            if (!subdomains || subdomains.length === 0) {
+                container.innerHTML = '<p class="no-subdomains">No subdomains match your filters.</p>';
+                return;
+            }
+
+            // Update filter count
+            const filterCount = document.querySelector('.filter-count');
+            if (filterCount) {
+                filterCount.textContent = `${subdomains.length} subdomains`;
+            }
+
+            let html = '<ul class="list-group subdomain-list">';
+
+            subdomains.forEach(subdomain => {
+                html += `
+                    <li class="list-group-item subdomain-item" data-subdomain-id="${subdomain.ID}">
+                        <div class="subdomain-name">${subdomain.Subdomain}</div>
+                        <div class="subdomain-info">
+                            <span class="status-code ${getStatusClass(subdomain.StatusCode)}">
+                                Status: ${subdomain.StatusCode || 'Unknown'}
+                            </span>
+                            <span class="technology">
+                                Tech: ${subdomain.Technology || 'Unknown'}
+                            </span>
+                        </div>
+                        <div class="scan-actions">
+                            <button class="btn btn-sm ${subdomain.GauScanned ? 'btn-success' : 'btn-primary'} gau-btn"
+                                    data-url="https://${subdomain.Subdomain}"
+                                    title="${subdomain.GauScanned ? 'GAU already scanned' : 'Run GAU scan'}">
+                                ${subdomain.GauScanned ? 'GAU ✓' : 'Run GAU'}
+                            </button>
+                            <button class="btn btn-sm ${subdomain.NaabuScanned ? 'btn-success' : 'btn-primary'} naabu-btn"
+                                    data-url="https://${subdomain.Subdomain}"
+                                    title="${subdomain.NaabuScanned ? 'Ports already scanned' : 'Scan ports'}">
+                                ${subdomain.NaabuScanned ? 'Ports ✓' : 'Scan Ports'}
+                            </button>
+                        </div>
+                        <div class="scan-status">
+                            <span class="badge ${subdomain.GauScanned ? 'bg-success' : 'bg-secondary'}">
+                                GAU: ${subdomain.GauScanned ? 'Scanned' : 'Not Scanned'}
+                            </span>
+                            <span class="badge ${subdomain.NaabuScanned ? 'bg-success' : 'bg-secondary'}">
+                                Naabu: ${subdomain.NaabuScanned ? 'Scanned' : 'Not Scanned'}
+                            </span>
+                            <span class="badge ${subdomain.NucleiScanned ? 'bg-success' : 'bg-secondary'}">
+                                Nuclei: ${subdomain.NucleiScanned ? 'Scanned' : 'Not Scanned'}
+                            </span>
+                        </div>
+                    </li>
+                `;
+            });
+
+            html += '</ul>';
+            container.innerHTML = html;
+
+            // Add event listeners to the newly created elements
+            addSubdomainEventListeners();
+        }
+
+        // Function to apply filters
+        function applyFilters() {
+            const subdomainFilter = document.getElementById('subdomain-filter').value.toLowerCase();
+            const techFilter = document.getElementById('tech-filter').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+
+            // Filter the subdomains based on the filter values
+            const filteredSubdomains = window.allSubdomains.filter(subdomain => {
+                // Filter by subdomain name
+                if (subdomainFilter && !subdomain.Subdomain.toLowerCase().includes(subdomainFilter)) {
+                    return false;
+                }
+
+                // Filter by technology
+                if (techFilter) {
+                    const tech = (subdomain.Technology || '').toLowerCase();
+                    if (!tech.includes(techFilter)) {
+                        return false;
+                    }
+                }
+
+                // Filter by status code
+                if (statusFilter) {
+                    const statusCode = subdomain.StatusCode || '';
+                    if (!statusCode.startsWith(statusFilter)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            // Render the filtered list
+            renderSubdomainList(filteredSubdomains);
+        }
+
+        // Function to clear filters
+        function clearFilters() {
+            document.getElementById('subdomain-filter').value = '';
+            document.getElementById('tech-filter').value = '';
+            document.getElementById('status-filter').value = '';
+
+            // Render the original list
+            renderSubdomainList(window.allSubdomains);
+        }
+
+        // Function to add event listeners to subdomain items
+        function addSubdomainEventListeners() {
+            const subdomainItems = document.querySelectorAll('.subdomain-item');
+
+            subdomainItems.forEach(item => {
+                // Add click event for the item itself (excluding buttons)
+                item.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on a button
+                    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                        return;
+                    }
+
+                    // Clear previous selection
+                    subdomainItems.forEach(i => i.classList.remove('active'));
+
+                    // Mark this item as active
+                    this.classList.add('active');
+
+                    // Get subdomain ID and name
+                    const subdomainId = this.getAttribute('data-subdomain-id');
+                    const subdomainName = this.querySelector('.subdomain-name').textContent.trim();
+
+                    // Update selected subdomain display
+                    document.getElementById('selected-subdomain').textContent = subdomainName;
+
+                    // Show subdomain details card
+                    document.querySelector('.subdomain-details-card').style.display = 'block';
+
+                    // Show loading indicator
+                    document.getElementById('subdomain-details-loading').style.display = 'flex';
+                    document.getElementById('subdomain-details-container').innerHTML = '';
+
+                    // Fetch subdomain details
+                    fetchSubdomainDetails(subdomainId);
+                });
+
+                // Add click events for GAU buttons
+                const gauBtn = item.querySelector('.gau-btn');
+                if (gauBtn) {
+                    gauBtn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent item click
+                        const url = this.getAttribute('data-url');
+                        const subdomainId = item.getAttribute('data-subdomain-id');
+                        // We don't need a session ID when running from the history page
+                        // Just use a placeholder value
+                        const sessionId = 'history-scan';
+
+                        // Disable button and show loading state
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Running...';
+
+                        // Run GAU scan
+                        runGauScan(url, sessionId, subdomainId, this);
+                    });
+                }
+
+                // Add click events for Naabu buttons
+                const naabuBtn = item.querySelector('.naabu-btn');
+                if (naabuBtn) {
+                    naabuBtn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent item click
+                        const url = this.getAttribute('data-url');
+                        const subdomainId = item.getAttribute('data-subdomain-id');
+                        // We don't need a session ID when running from the history page
+                        // Just use a placeholder value
+                        const sessionId = 'history-scan';
+
+                        // Disable button and show loading state
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Running...';
+
+                        // Run Naabu scan
+                        runNaabuScan(url, sessionId, subdomainId, this);
+                    });
+                }
+            });
+        }
     });
 </script>
 
@@ -623,6 +810,63 @@
         background-color: rgba(0, 255, 204, 0.1);
         padding: 2px 6px;
         border-radius: 4px;
+    }
+
+    .filter-section {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .filter-header h5 {
+        margin: 0;
+        color: #00aaff;
+    }
+
+    .filter-count {
+        color: #aaaaaa;
+        font-size: 0.9em;
+    }
+
+    .filter-inputs {
+        display: flex;
+        gap: 10px;
+    }
+
+    .filter-inputs .input-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .filter-inputs input, .filter-inputs select {
+        flex: 1;
+        min-width: 150px;
+        background-color: rgba(0, 0, 0, 0.3);
+        border: 1px solid #333;
+        color: #fff;
+    }
+
+    .filter-inputs input::placeholder {
+        color: #888;
+    }
+
+    #clear-filters {
+        background-color: #444;
+        border: none;
+        color: #ddd;
+    }
+
+    #clear-filters:hover {
+        background-color: #555;
     }
 
     .scan-actions {

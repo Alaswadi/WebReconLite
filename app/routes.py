@@ -123,30 +123,16 @@ def run_gau_for_host():
     host_gau_file = os.path.join(scan_dir, f'gau_{domain}.txt')
 
     try:
-        # Run Gau directly
-        print(f"Running GAU for {domain}...")
-        from app.tools import run_gau, parse_gau_output
-        run_gau(domain, host_gau_file)
-        urls = parse_gau_output(host_gau_file)
-        print(f"GAU completed for {domain}, found {len(urls)} URLs")
+        # Run Gau using Celery task
+        print(f"Starting GAU task for {domain}...")
+        from app.tasks import run_gau_task
+        task = run_gau_task.delay(domain, host_gau_file)
+        print(f"GAU task started with ID: {task.id}")
 
-        # Update the scan status file with the URLs
-        status_file = os.path.join(scan_dir, 'status.json')
-        if os.path.exists(status_file):
-            try:
-                with open(status_file, 'r') as f:
-                    scan_status = json.load(f)
+        # Mark the subdomain as being scanned
+        # The actual results will be processed by the Celery task
 
-                # Update the URLs in the status file
-                scan_status['urls'] = urls
-
-                # Save the updated status
-                with open(status_file, 'w') as f:
-                    json.dump(scan_status, f)
-
-                print(f"Updated status file with {len(urls)} URLs")
-            except Exception as e:
-                print(f"Error updating status file: {str(e)}")
+        # We'll update the status file in the Celery task
 
         # Store GAU results in the database
         try:
@@ -176,25 +162,21 @@ def run_gau_for_host():
 
             print(f"Using subdomain_id: {subdomain_id} for storing GAU results")
 
-            # Add GAU results to database
-            print(f"Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
-            if add_gau_results_batch(subdomain_id, urls):
-                # Update subdomain scan status
-                update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
-                print(f"Successfully added GAU results to database and updated scan status")
-            else:
-                print(f"Failed to add GAU results to database")
+            # Mark the subdomain as being scanned
+            # The Celery task will add the results to the database when it completes
+            update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
+            print(f"Marked subdomain ID {subdomain_id} as being scanned by GAU")
         except Exception as e:
             print(f"Error storing GAU results in database: {str(e)}")
             import traceback
             traceback.print_exc()
 
-        # Return results directly
+        # Return success response immediately
         return jsonify({
             'success': True,
             'host': domain,
-            'url_count': len(urls),
-            'urls': urls[:100]  # Limit to first 100 URLs
+            'message': 'GAU scan started in the background',
+            'task_id': task.id
         })
     except Exception as e:
         print(f"Error running GAU: {str(e)}")
@@ -255,34 +237,16 @@ def run_naabu_for_host():
     host_naabu_file = os.path.join(scan_dir, f'naabu_{domain}.txt')
 
     try:
-        # Run Naabu directly
-        print(f"Running Naabu for {domain}...")
-        from app.tools import run_naabu, parse_naabu_output
-        run_naabu(domain, host_naabu_file)
-        ports = parse_naabu_output(host_naabu_file)
-        print(f"Naabu completed for {domain}, found {len(ports)} open ports")
+        # Run Naabu using Celery task
+        print(f"Starting Naabu task for {domain}...")
+        from app.tasks import run_naabu_task
+        task = run_naabu_task.delay(domain, host_naabu_file)
+        print(f"Naabu task started with ID: {task.id}")
 
-        # Update the scan status file with the ports
-        status_file = os.path.join(scan_dir, 'status.json')
-        if os.path.exists(status_file):
-            try:
-                with open(status_file, 'r') as f:
-                    scan_status = json.load(f)
+        # Mark the subdomain as being scanned
+        # The actual results will be processed by the Celery task
 
-                # Update the ports in the status file
-                if 'ports' not in scan_status:
-                    scan_status['ports'] = {}
-
-                # Add ports for this domain
-                scan_status['ports'][domain] = ports
-
-                # Save the updated status
-                with open(status_file, 'w') as f:
-                    json.dump(scan_status, f)
-
-                print(f"Updated status file with {len(ports)} ports for {domain}")
-            except Exception as e:
-                print(f"Error updating status file: {str(e)}")
+        # We'll update the status file in the Celery task
 
         # Store Naabu results in the database
         try:
@@ -312,27 +276,21 @@ def run_naabu_for_host():
 
             print(f"Using subdomain_id: {subdomain_id} for storing Naabu results")
 
-            # Add Naabu results to database
-            print(f"Adding {len(ports)} Naabu results to database for subdomain ID {subdomain_id}")
-            # Extract port numbers from the port objects
-            port_numbers = [int(port['port']) for port in ports]
-            if add_naabu_results_batch(subdomain_id, port_numbers):
-                # Update subdomain scan status
-                update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
-                print(f"Successfully added Naabu results to database and updated scan status")
-            else:
-                print(f"Failed to add Naabu results to database")
+            # Mark the subdomain as being scanned
+            # The Celery task will add the results to the database when it completes
+            update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
+            print(f"Marked subdomain ID {subdomain_id} as being scanned by Naabu")
         except Exception as e:
             print(f"Error storing Naabu results in database: {str(e)}")
             import traceback
             traceback.print_exc()
 
-        # Return results directly
+        # Return success response immediately
         return jsonify({
             'success': True,
             'host': domain,
-            'port_count': len(ports),
-            'ports': ports
+            'message': 'Port scan started in the background',
+            'task_id': task.id
         })
     except Exception as e:
         print(f"Error running Naabu: {str(e)}")

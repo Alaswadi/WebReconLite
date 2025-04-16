@@ -172,9 +172,27 @@ def run_gau_task(self, domain, output_file):
         output_file (str): The file to save results to
     """
     try:
+        from app.database import get_domain_id, get_subdomain_id, add_gau_results_batch
+
         self.update_state(state='PROGRESS', meta={'status': 'Running Gau...'})
+        print(f"Celery task: Running GAU for {domain}, output file: {output_file}")
+
+        # Run GAU
         run_gau(domain, output_file)
+
+        # Parse results
         urls = parse_gau_output(output_file)
+        print(f"Celery task: GAU completed for {domain}, found {len(urls)} URLs")
+
+        # Find the subdomain in the database
+        domain_id = get_domain_id(domain)
+        if domain_id:
+            subdomain_id = get_subdomain_id(domain_id, domain)
+            if subdomain_id:
+                # Store results in the database
+                print(f"Celery task: Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
+                add_gau_results_batch(subdomain_id, urls)
+                print(f"Celery task: Successfully added GAU results to database")
 
         return {
             'status': 'completed',
@@ -183,6 +201,9 @@ def run_gau_task(self, domain, output_file):
             'urls': urls[:100]  # Limit to first 100 URLs
         }
     except Exception as e:
+        print(f"Celery task: Error running GAU: {str(e)}")
+        import traceback
+        traceback.print_exc()
         self.update_state(state='FAILURE', meta={'error': str(e)})
         raise
 
@@ -196,9 +217,29 @@ def run_naabu_task(self, domain, output_file):
         output_file (str): The file to save results to
     """
     try:
+        from app.database import get_domain_id, get_subdomain_id, add_naabu_results_batch
+
         self.update_state(state='PROGRESS', meta={'status': 'Running Naabu...'})
+        print(f"Celery task: Running Naabu for {domain}, output file: {output_file}")
+
+        # Run Naabu
         run_naabu(domain, output_file)
+
+        # Parse results
         ports = parse_naabu_output(output_file)
+        print(f"Celery task: Naabu completed for {domain}, found {len(ports)} open ports")
+
+        # Find the subdomain in the database
+        domain_id = get_domain_id(domain)
+        if domain_id:
+            subdomain_id = get_subdomain_id(domain_id, domain)
+            if subdomain_id:
+                # Store results in the database
+                print(f"Celery task: Adding {len(ports)} Naabu results to database for subdomain ID {subdomain_id}")
+                # Extract port numbers from the port objects
+                port_numbers = [int(port['port']) for port in ports]
+                add_naabu_results_batch(subdomain_id, port_numbers)
+                print(f"Celery task: Successfully added Naabu results to database")
 
         return {
             'status': 'completed',
@@ -207,6 +248,9 @@ def run_naabu_task(self, domain, output_file):
             'ports': ports
         }
     except Exception as e:
+        print(f"Celery task: Error running Naabu: {str(e)}")
+        import traceback
+        traceback.print_exc()
         self.update_state(state='FAILURE', meta={'error': str(e)})
         raise
 

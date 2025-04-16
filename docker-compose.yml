@@ -10,6 +10,7 @@ services:
       - "8001:8001"
     volumes:
       - ./app/results:/app/app/results
+      - ./app/data:/app/app/data
     environment:
       - SECRET_KEY=webreconlite-production-key
       - DEBUG=True
@@ -40,6 +41,7 @@ services:
     command: ["celery", "-A", "celery_worker", "worker", "--loglevel=debug", "--concurrency=1"]
     volumes:
       - ./app/results:/app/app/results
+      - ./app/data:/app/app/data
     environment:
       - SECRET_KEY=webreconlite-production-key
       - DEBUG=True
@@ -124,3 +126,4 @@ networks:
 volumes:
   results-data:
   redis-data:
+  db-data:

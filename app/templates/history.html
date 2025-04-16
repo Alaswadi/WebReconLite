@@ -111,20 +111,20 @@
                         fetchSubdomainDetails(selectedSubdomainId);
                     }
 
-                    // Show success message
-                    alert('GAU scan completed successfully!');
+                    // No popup message needed for GAU scan completion
                 } else {
                     // Show error and reset button
                     button.disabled = false;
                     button.innerHTML = 'Run GAU';
-                    alert('Error running GAU scan: ' + (data.error || 'Unknown error'));
+                    console.error('Error running GAU scan:', data.error || 'Unknown error');
+                    alert('Error running GAU scan. Please check the console for details.');
                 }
             })
             .catch(error => {
                 console.error('Error running GAU scan:', error);
                 button.disabled = false;
                 button.innerHTML = 'Run GAU';
-                alert('Error running GAU scan. Please try again.');
+                alert('Error running GAU scan. Please check the console for details.');
             });
         }
 
@@ -164,20 +164,20 @@
                         fetchSubdomainDetails(selectedSubdomainId);
                     }
 
-                    // Show success message
-                    alert('Port scan completed successfully!');
+                    // No popup message needed for port scan completion
                 } else {
                     // Show error and reset button
                     button.disabled = false;
                     button.innerHTML = 'Scan Ports';
-                    alert('Error running port scan: ' + (data.error || 'Unknown error'));
+                    console.error('Error running port scan:', data.error || 'Unknown error');
+                    alert('Error running port scan. Please check the console for details.');
                 }
             })
             .catch(error => {
                 console.error('Error running port scan:', error);
                 button.disabled = false;
                 button.innerHTML = 'Scan Ports';
-                alert('Error running port scan. Please try again.');
+                alert('Error running port scan. Please check the console for details.');
             });
         }
         // Domain selection

@@ -6,7 +6,7 @@ This script is meant to be run when the container starts.
 
 import os
 import sys
-from database import init_db, ensure_data_dir, DB_FILE
+from app.database import init_db, ensure_data_dir, DB_FILE
 
 def main():
     """Initialize the database if it doesn't exist."""

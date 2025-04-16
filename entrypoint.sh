@@ -158,7 +158,22 @@ echo "Checking installed tools..."
 
 # Initialize the database if it doesn't exist
 echo "Initializing database..."
-cd /app && python -m app.init_db
+cd /app
+
+# Create the data directory if it doesn't exist
+mkdir -p /app/app/data
+
+# Check if the database file exists
+if [ ! -f /app/app/data/webreconlite.db ]; then
+    echo "Database file does not exist, initializing..."
+    # Initialize the database using Python
+    python -c "from app.database import init_db; init_db()"
+    echo "Database initialized."
+else
+    echo "Database file already exists at /app/app/data/webreconlite.db"
+    echo "Size: $(du -h /app/app/data/webreconlite.db | cut -f1)"
+    echo "Skipping initialization."
+fi
 
 # Start Gunicorn
 echo "Starting Gunicorn..."

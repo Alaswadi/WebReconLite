@@ -163,19 +163,20 @@ def run_scan_task(self, domain, session_id, results_dir):
         raise
 
 @celery.task(bind=True)
-def run_gau_task(self, domain, output_file):
+def run_gau_task(self, domain, output_file, subdomain_id=None):
     """
     Celery task to run Gau for a specific domain.
 
     Args:
         domain (str): The domain to scan with Gau
         output_file (str): The file to save results to
+        subdomain_id (int, optional): The ID of the subdomain in the database
     """
     try:
-        from app.database import get_domain_id, get_subdomain_id, add_gau_results_batch
+        from app.database import get_domain_id, get_subdomain_id, add_gau_results_batch, update_subdomain_scan_status
 
         self.update_state(state='PROGRESS', meta={'status': 'Running Gau...'})
-        print(f"Celery task: Running GAU for {domain}, output file: {output_file}")
+        print(f"Celery task: Running GAU for {domain}, output file: {output_file}, subdomain_id: {subdomain_id}")
 
         # Run GAU
         run_gau(domain, output_file)
@@ -184,15 +185,23 @@ def run_gau_task(self, domain, output_file):
         urls = parse_gau_output(output_file)
         print(f"Celery task: GAU completed for {domain}, found {len(urls)} URLs")
 
-        # Find the subdomain in the database
-        domain_id = get_domain_id(domain)
-        if domain_id:
-            subdomain_id = get_subdomain_id(domain_id, domain)
-            if subdomain_id:
-                # Store results in the database
-                print(f"Celery task: Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
-                add_gau_results_batch(subdomain_id, urls)
-                print(f"Celery task: Successfully added GAU results to database")
+        # If we don't have a subdomain_id, try to find it in the database
+        if not subdomain_id:
+            domain_id = get_domain_id(domain)
+            if domain_id:
+                subdomain_id = get_subdomain_id(domain_id, domain)
+
+        # If we have a subdomain_id, store the results in the database
+        if subdomain_id:
+            # Store results in the database
+            print(f"Celery task: Adding {len(urls)} GAU results to database for subdomain ID {subdomain_id}")
+            add_gau_results_batch(subdomain_id, urls)
+
+            # Mark the subdomain as scanned
+            update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
+            print(f"Celery task: Successfully added GAU results to database and marked subdomain as scanned")
+        else:
+            print(f"Celery task: No subdomain_id found for {domain}, results will not be stored in the database")
 
         return {
             'status': 'completed',
@@ -208,19 +217,20 @@ def run_gau_task(self, domain, output_file):
         raise
 
 @celery.task(bind=True)
-def run_naabu_task(self, domain, output_file):
+def run_naabu_task(self, domain, output_file, subdomain_id=None):
     """
     Celery task to run Naabu for a specific domain.
 
     Args:
         domain (str): The domain to scan with Naabu
         output_file (str): The file to save results to
+        subdomain_id (int, optional): The ID of the subdomain in the database
     """
     try:
-        from app.database import get_domain_id, get_subdomain_id, add_naabu_results_batch
+        from app.database import get_domain_id, get_subdomain_id, add_naabu_results_batch, update_subdomain_scan_status
 
         self.update_state(state='PROGRESS', meta={'status': 'Running Naabu...'})
-        print(f"Celery task: Running Naabu for {domain}, output file: {output_file}")
+        print(f"Celery task: Running Naabu for {domain}, output file: {output_file}, subdomain_id: {subdomain_id}")
 
         # Run Naabu
         run_naabu(domain, output_file)
@@ -229,17 +239,25 @@ def run_naabu_task(self, domain, output_file):
         ports = parse_naabu_output(output_file)
         print(f"Celery task: Naabu completed for {domain}, found {len(ports)} open ports")
 
-        # Find the subdomain in the database
-        domain_id = get_domain_id(domain)
-        if domain_id:
-            subdomain_id = get_subdomain_id(domain_id, domain)
-            if subdomain_id:
-                # Store results in the database
-                print(f"Celery task: Adding {len(ports)} Naabu results to database for subdomain ID {subdomain_id}")
-                # Extract port numbers from the port objects
-                port_numbers = [int(port['port']) for port in ports]
-                add_naabu_results_batch(subdomain_id, port_numbers)
-                print(f"Celery task: Successfully added Naabu results to database")
+        # If we don't have a subdomain_id, try to find it in the database
+        if not subdomain_id:
+            domain_id = get_domain_id(domain)
+            if domain_id:
+                subdomain_id = get_subdomain_id(domain_id, domain)
+
+        # If we have a subdomain_id, store the results in the database
+        if subdomain_id:
+            # Store results in the database
+            print(f"Celery task: Adding {len(ports)} Naabu results to database for subdomain ID {subdomain_id}")
+            # Extract port numbers from the port objects
+            port_numbers = [int(port['port']) for port in ports]
+            add_naabu_results_batch(subdomain_id, port_numbers)
+
+            # Mark the subdomain as scanned
+            update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
+            print(f"Celery task: Successfully added Naabu results to database and marked subdomain as scanned")
+        else:
+            print(f"Celery task: No subdomain_id found for {domain}, results will not be stored in the database")
 
         return {
             'status': 'completed',

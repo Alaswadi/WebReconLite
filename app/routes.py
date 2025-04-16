@@ -126,50 +126,41 @@ def run_gau_for_host():
         # Run Gau using Celery task
         print(f"Starting GAU task for {domain}...")
         from app.tasks import run_gau_task
-        task = run_gau_task.delay(domain, host_gau_file)
-        print(f"GAU task started with ID: {task.id}")
+
+        # Get the subdomain_id if we haven't already
+        if not subdomain_id:
+            # Look up or create the domain and subdomain
+            print(f"Looking up domain and subdomain in database")
+            # Get domain ID
+            domain_id = get_domain_id(domain)
+            if not domain_id:
+                print(f"Domain {domain} not found in database, adding it")
+                domain_id = add_domain(domain)
+                if not domain_id:
+                    print(f"Failed to add domain {domain} to database")
+                    raise Exception(f"Failed to add domain {domain} to database")
+
+            # Get subdomain ID
+            subdomain_id = get_subdomain_id(domain_id, domain)
+            if not subdomain_id:
+                print(f"Subdomain {domain} not found in database, adding it")
+                subdomain_id = add_subdomain(domain_id, domain)
+                if not subdomain_id:
+                    print(f"Failed to add subdomain {domain} to database")
+                    raise Exception(f"Failed to add subdomain {domain} to database")
+
+        # Pass the subdomain_id to the Celery task
+        task = run_gau_task.delay(domain, host_gau_file, subdomain_id)
+        print(f"GAU task started with ID: {task.id} for subdomain ID: {subdomain_id}")
 
         # Mark the subdomain as being scanned
         # The actual results will be processed by the Celery task
 
         # We'll update the status file in the Celery task
 
-        # Store GAU results in the database
-        try:
-            # If we have a subdomain_id from the request, use it directly
-            if subdomain_id:
-                print(f"Using provided subdomain_id: {subdomain_id} from history page")
-            else:
-                # Otherwise, look up or create the domain and subdomain
-                print(f"Looking up domain and subdomain in database")
-                # Get domain ID
-                domain_id = get_domain_id(domain)
-                if not domain_id:
-                    print(f"Domain {domain} not found in database, adding it")
-                    domain_id = add_domain(domain)
-                    if not domain_id:
-                        print(f"Failed to add domain {domain} to database")
-                        raise Exception(f"Failed to add domain {domain} to database")
-
-                # Get subdomain ID
-                subdomain_id = get_subdomain_id(domain_id, domain)
-                if not subdomain_id:
-                    print(f"Subdomain {domain} not found in database, adding it")
-                    subdomain_id = add_subdomain(domain_id, domain)
-                    if not subdomain_id:
-                        print(f"Failed to add subdomain {domain} to database")
-                        raise Exception(f"Failed to add subdomain {domain} to database")
-
-            print(f"Using subdomain_id: {subdomain_id} for storing GAU results")
-
-            # Mark the subdomain as being scanned
-            # The Celery task will add the results to the database when it completes
-            update_subdomain_scan_status(subdomain_id, 'GauScanned', 1)
-            print(f"Marked subdomain ID {subdomain_id} as being scanned by GAU")
-        except Exception as e:
-            print(f"Error storing GAU results in database: {str(e)}")
-            import traceback
-            traceback.print_exc()
+        # We've already handled getting the subdomain_id above
+        print(f"Using subdomain_id: {subdomain_id} for the GAU task")
+        print(f"Subdomain ID {subdomain_id} will be marked as scanned when the GAU task completes")
 
         # Return success response immediately
         return jsonify({
@@ -240,50 +231,41 @@ def run_naabu_for_host():
         # Run Naabu using Celery task
         print(f"Starting Naabu task for {domain}...")
         from app.tasks import run_naabu_task
-        task = run_naabu_task.delay(domain, host_naabu_file)
-        print(f"Naabu task started with ID: {task.id}")
+
+        # Get the subdomain_id if we haven't already
+        if not subdomain_id:
+            # Look up or create the domain and subdomain
+            print(f"Looking up domain and subdomain in database")
+            # Get domain ID
+            domain_id = get_domain_id(domain)
+            if not domain_id:
+                print(f"Domain {domain} not found in database, adding it")
+                domain_id = add_domain(domain)
+                if not domain_id:
+                    print(f"Failed to add domain {domain} to database")
+                    raise Exception(f"Failed to add domain {domain} to database")
+
+            # Get subdomain ID
+            subdomain_id = get_subdomain_id(domain_id, domain)
+            if not subdomain_id:
+                print(f"Subdomain {domain} not found in database, adding it")
+                subdomain_id = add_subdomain(domain_id, domain)
+                if not subdomain_id:
+                    print(f"Failed to add subdomain {domain} to database")
+                    raise Exception(f"Failed to add subdomain {domain} to database")
+
+        # Pass the subdomain_id to the Celery task
+        task = run_naabu_task.delay(domain, host_naabu_file, subdomain_id)
+        print(f"Naabu task started with ID: {task.id} for subdomain ID: {subdomain_id}")
 
         # Mark the subdomain as being scanned
         # The actual results will be processed by the Celery task
 
         # We'll update the status file in the Celery task
 
-        # Store Naabu results in the database
-        try:
-            # If we have a subdomain_id from the request, use it directly
-            if subdomain_id:
-                print(f"Using provided subdomain_id: {subdomain_id} from history page")
-            else:
-                # Otherwise, look up or create the domain and subdomain
-                print(f"Looking up domain and subdomain in database")
-                # Get domain ID
-                domain_id = get_domain_id(domain)
-                if not domain_id:
-                    print(f"Domain {domain} not found in database, adding it")
-                    domain_id = add_domain(domain)
-                    if not domain_id:
-                        print(f"Failed to add domain {domain} to database")
-                        raise Exception(f"Failed to add domain {domain} to database")
-
-                # Get subdomain ID
-                subdomain_id = get_subdomain_id(domain_id, domain)
-                if not subdomain_id:
-                    print(f"Subdomain {domain} not found in database, adding it")
-                    subdomain_id = add_subdomain(domain_id, domain)
-                    if not subdomain_id:
-                        print(f"Failed to add subdomain {domain} to database")
-                        raise Exception(f"Failed to add subdomain {domain} to database")
-
-            print(f"Using subdomain_id: {subdomain_id} for storing Naabu results")
-
-            # Mark the subdomain as being scanned
-            # The Celery task will add the results to the database when it completes
-            update_subdomain_scan_status(subdomain_id, 'NaabuScanned', 1)
-            print(f"Marked subdomain ID {subdomain_id} as being scanned by Naabu")
-        except Exception as e:
-            print(f"Error storing Naabu results in database: {str(e)}")
-            import traceback
-            traceback.print_exc()
+        # We've already handled getting the subdomain_id above
+        print(f"Using subdomain_id: {subdomain_id} for the Naabu task")
+        print(f"Subdomain ID {subdomain_id} will be marked as scanned when the Naabu task completes")
 
         # Return success response immediately
         return jsonify({

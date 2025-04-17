@@ -235,7 +235,12 @@
                         data.subdomains.forEach(subdomain => {
                             html += `
                                 <li class="list-group-item subdomain-item" data-subdomain-id="${subdomain.ID}">
-                                    <div class="subdomain-name">${subdomain.Subdomain}</div>
+                                    <div class="subdomain-name">
+                                        <a href="https://${subdomain.Subdomain}" target="_blank" class="subdomain-link" title="Open in new tab">
+                                            ${subdomain.Subdomain}
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    </div>
                                     <div class="subdomain-info">
                                         <span class="status-code ${getStatusClass(subdomain.StatusCode)}">
                                             Status: ${subdomain.StatusCode || 'Unknown'}
@@ -283,7 +288,7 @@
                                 let visibleCount = 0;
 
                                 subdomainItems.forEach(item => {
-                                    const subdomainName = item.querySelector('.subdomain-name').textContent.toLowerCase();
+                                    const subdomainName = item.querySelector('.subdomain-link').textContent.toLowerCase();
                                     const statusCode = item.querySelector('.status-code').textContent.toLowerCase();
                                     const technology = item.querySelector('.technology').textContent.toLowerCase();
 
@@ -316,8 +321,9 @@
                         subdomainItems.forEach(item => {
                             // Add click event for the item itself (excluding buttons)
                             item.addEventListener('click', function(e) {
-                                // Don't trigger if clicking on a button
-                                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                                // Don't trigger if clicking on a button or link
+                                if (e.target.tagName === 'BUTTON' || e.target.closest('button') ||
+                                    e.target.tagName === 'A' || e.target.closest('a')) {
                                     return;
                                 }
 
@@ -329,7 +335,7 @@
 
                                 // Get subdomain ID and name
                                 const subdomainId = this.getAttribute('data-subdomain-id');
-                                const subdomainName = this.querySelector('.subdomain-name').textContent.trim();
+                                const subdomainName = this.querySelector('.subdomain-link').textContent.trim();
 
                                 // Update selected subdomain display
                                 document.getElementById('selected-subdomain').textContent = subdomainName;
@@ -648,7 +654,24 @@
     .subdomain-name {
         font-weight: bold;
         font-size: 1.1em;
+    }
+
+    .subdomain-link {
         color: #00aaff;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .subdomain-link:hover {
+        color: #33bbff;
+        text-decoration: underline;
+    }
+
+    .subdomain-link i {
+        font-size: 0.8em;
+        opacity: 0.7;
     }
 
     .subdomain-info {

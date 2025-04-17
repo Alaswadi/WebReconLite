@@ -236,7 +236,7 @@
                             html += `
                                 <li class="list-group-item subdomain-item" data-subdomain-id="${subdomain.ID}">
                                     <div class="subdomain-name">
-                                        <a href="https://${subdomain.Subdomain}" target="_blank" class="subdomain-link" title="Open in new tab">
+                                        <a href="${subdomain.Subdomain.startsWith('http') ? subdomain.Subdomain : 'https://' + subdomain.Subdomain}" target="_blank" class="subdomain-link" title="Open in new tab">
                                             ${subdomain.Subdomain}
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
@@ -251,12 +251,12 @@
                                     </div>
                                     <div class="scan-actions">
                                         <button class="btn btn-sm ${subdomain.GauScanned ? 'btn-success' : 'btn-primary'} gau-btn"
-                                                data-url="https://${subdomain.Subdomain}"
+                                                data-url="${subdomain.Subdomain.startsWith('http') ? subdomain.Subdomain : 'https://' + subdomain.Subdomain}"
                                                 title="${subdomain.GauScanned ? 'GAU already scanned' : 'Run GAU scan'}">
                                             ${subdomain.GauScanned ? 'GAU ✓' : 'Run GAU'}
                                         </button>
                                         <button class="btn btn-sm ${subdomain.NaabuScanned ? 'btn-success' : 'btn-primary'} naabu-btn"
-                                                data-url="https://${subdomain.Subdomain}"
+                                                data-url="${subdomain.Subdomain.startsWith('http') ? subdomain.Subdomain : 'https://' + subdomain.Subdomain}"
                                                 title="${subdomain.NaabuScanned ? 'Ports already scanned' : 'Scan ports'}">
                                             ${subdomain.NaabuScanned ? 'Ports ✓' : 'Scan Ports'}
                                         </button>
@@ -463,9 +463,9 @@
                             html += `
                                 <li class="list-group-item port-item">
                                     <span class="port-number">${port}</span>
-                                    <a href="${port === 443 ? 'https' : 'http'}://${data.Subdomain}:${port}"
+                                    <a href="${port === 443 ? 'https' : 'http'}://${data.Subdomain.startsWith('http') ? data.Subdomain.replace(/^https?:\/\//, '') : data.Subdomain}:${port}"
                                        target="_blank" class="port-link">
-                                        ${port === 443 ? 'https' : 'http'}://${data.Subdomain}:${port}
+                                        ${port === 443 ? 'https' : 'http'}://${data.Subdomain.startsWith('http') ? data.Subdomain.replace(/^https?:\/\//, '') : data.Subdomain}:${port}
                                     </a>
                                 </li>
                             `;

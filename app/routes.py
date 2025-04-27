@@ -11,7 +11,7 @@ from app.tasks import run_scan_task, run_gau_task, run_naabu_task
 from app.database import (add_domain, add_subdomain, update_subdomain_scan_status,
                          update_subdomain_info, add_gau_results_batch, add_naabu_results_batch,
                          get_domain_id, get_subdomain_id, get_domains_with_scans, get_scanned_subdomains,
-                         get_subdomain_details, get_gau_results, get_naabu_results)
+                         get_subdomain_details, get_gau_results, get_naabu_results, delete_domain)
 
 # Create blueprint
 main = Blueprint('main', __name__)
@@ -61,6 +61,21 @@ def subdomain_details(subdomain_id):
         print(f"Nuclei results: {len(details['nuclei_results'])} vulnerabilities")
 
     return jsonify(details)
+
+@main.route('/delete-domain/<int:domain_id>', methods=['POST'])
+def delete_domain_route(domain_id):
+    """Delete a domain and all related data."""
+    print(f"Request to delete domain with ID: {domain_id}")
+
+    # Delete the domain and all related data
+    success = delete_domain(domain_id)
+
+    if success:
+        print(f"Successfully deleted domain with ID: {domain_id}")
+        return jsonify({'success': True, 'message': 'Domain and all related data deleted successfully'})
+    else:
+        print(f"Failed to delete domain with ID: {domain_id}")
+        return jsonify({'success': False, 'error': 'Failed to delete domain'}), 500
 
 @main.route('/tools')
 def tools_status():

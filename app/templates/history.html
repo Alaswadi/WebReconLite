@@ -21,16 +21,15 @@
                     {% if domains %}
                         <ul class="list-group domain-list">
                             {% for domain in domains %}
-                                <li class="list-group-item domain-item" data-domain-id="{{ domain.ID }}">
-                                    <div class="domain-content">
-                                        <span class="domain-name">{{ domain.Domain }}</span>
-                                        <button class="btn btn-sm btn-danger delete-domain-btn"
-                                                data-domain-id="{{ domain.ID }}"
-                                                data-domain-name="{{ domain.Domain }}"
-                                                title="Delete domain and all related data">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </div>
+                                <li class="list-group-item domain-item" data-domain-id="{{ domain.ID }}" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span class="domain-name">{{ domain.Domain }}</span>
+                                    <button class="btn btn-sm btn-danger delete-domain-btn"
+                                            style="background-color: #ff3333; color: white; border: none; padding: 3px 8px; border-radius: 3px;"
+                                            data-domain-id="{{ domain.ID }}"
+                                            data-domain-name="{{ domain.Domain }}"
+                                            title="Delete domain and all related data">
+                                        Delete
+                                    </button>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -81,59 +80,6 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Function to delete a domain
-        function deleteDomain(domainId, domainName) {
-            if (!confirm(`Are you sure you want to delete the domain "${domainName}" and all its related data? This action cannot be undone.`)) {
-                return;
-            }
-
-            fetch(`/delete-domain/${domainId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Remove the domain from the list
-                    const domainItem = document.querySelector(`.domain-item[data-domain-id="${domainId}"]`);
-                    if (domainItem) {
-                        domainItem.remove();
-                    }
-
-                    // Clear the subdomains and subdomain details if this domain was selected
-                    const selectedDomain = document.getElementById('selected-domain').textContent.trim();
-                    if (selectedDomain === `- ${domainName}`) {
-                        document.getElementById('selected-domain').textContent = '';
-                        document.getElementById('subdomains-container').innerHTML = '<p class="select-domain-prompt">Select a domain to view its subdomains.</p>';
-                        document.querySelector('.subdomain-details-card').style.display = 'none';
-                    }
-
-                    // Show success message
-                    alert(`Domain "${domainName}" and all related data have been deleted successfully.`);
-                } else {
-                    // Show error message
-                    alert(`Error deleting domain: ${data.error || 'Unknown error'}`);
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting domain:', error);
-                alert('Error deleting domain. Please check the console for details.');
-            });
-        }
-
-        // Add click event to delete domain buttons
-        document.querySelectorAll('.delete-domain-btn').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.stopPropagation(); // Prevent domain item click
-                const domainId = this.getAttribute('data-domain-id');
-                const domainName = this.getAttribute('data-domain-name');
-                deleteDomain(domainId, domainName);
-            });
-        });
-
-        // We don't need the getSessionId function anymore
 
         // Function to run GAU scan
         function runGauScan(url, sessionId, subdomainId, button) {
@@ -240,6 +186,45 @@
                 alert('Error running port scan. Please check the console for details.');
             });
         }
+        // Add click event to delete domain buttons
+        document.querySelectorAll('.delete-domain-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent domain item click
+                const domainId = this.getAttribute('data-domain-id');
+                const domainName = this.getAttribute('data-domain-name');
+
+                if (confirm(`Are you sure you want to delete the domain "${domainName}" and all its related data? This action cannot be undone.`)) {
+                    // Send delete request
+                    fetch(`/delete-domain/${domainId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the domain from the list
+                            const domainItem = document.querySelector(`.domain-item[data-domain-id="${domainId}"]`);
+                            if (domainItem) {
+                                domainItem.remove();
+                            }
+
+                            // Show success message
+                            alert(`Domain "${domainName}" and all related data have been deleted successfully.`);
+                        } else {
+                            // Show error message
+                            alert(`Error deleting domain: ${data.error || 'Unknown error'}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting domain:', error);
+                        alert('Error deleting domain. Please check the console for details.');
+                    });
+                }
+            });
+        });
+
         // Domain selection
         const domainItems = document.querySelectorAll('.domain-item');
         domainItems.forEach(item => {

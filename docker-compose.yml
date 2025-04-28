@@ -11,6 +11,7 @@ services:
     volumes:
       - ./app/results:/app/app/results
       - ./app/data:/app/app/data
+      - ./app/templates:/app/app/templates
     environment:
       - SECRET_KEY=webreconlite-production-key
       - DEBUG=True
@@ -42,6 +43,7 @@ services:
     volumes:
       - ./app/results:/app/app/results
       - ./app/data:/app/app/data
+      - ./app/templates:/app/app/templates
     environment:
       - SECRET_KEY=webreconlite-production-key
       - DEBUG=True

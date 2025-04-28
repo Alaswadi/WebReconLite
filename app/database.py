@@ -160,62 +160,6 @@ def get_domain_id(domain):
         if conn:
             conn.close()
 
-def delete_domain(domain_id):
-    """Delete a domain and all related data from the database"""
-    print(f"Deleting domain with ID {domain_id} and all related data")
-    conn = get_db_connection()
-    if conn is None:
-        print(f"Failed to get database connection for deleting domain ID: {domain_id}")
-        return False
-
-    try:
-        cursor = conn.cursor()
-        
-        # Get all subdomains for this domain
-        cursor.execute("SELECT ID FROM SUBDOMAINS WHERE DomainID = ?", (domain_id,))
-        subdomain_ids = [row[0] for row in cursor.fetchall()]
-        print(f"Found {len(subdomain_ids)} subdomains to delete for domain ID {domain_id}")
-        
-        # Begin transaction
-        conn.execute("BEGIN TRANSACTION")
-        
-        # Delete GAU results for all subdomains
-        for subdomain_id in subdomain_ids:
-            cursor.execute("DELETE FROM GAU_TABLE WHERE SID = ?", (subdomain_id,))
-            print(f"Deleted GAU results for subdomain ID {subdomain_id}")
-        
-        # Delete NAABU results for all subdomains
-        for subdomain_id in subdomain_ids:
-            cursor.execute("DELETE FROM NAABU_TABLE WHERE SID = ?", (subdomain_id,))
-            print(f"Deleted NAABU results for subdomain ID {subdomain_id}")
-        
-        # Delete NUCLEI results for all subdomains
-        for subdomain_id in subdomain_ids:
-            cursor.execute("DELETE FROM NUCLEI_TABLE WHERE SID = ?", (subdomain_id,))
-            print(f"Deleted NUCLEI results for subdomain ID {subdomain_id}")
-        
-        # Delete all subdomains for this domain
-        cursor.execute("DELETE FROM SUBDOMAINS WHERE DomainID = ?", (domain_id,))
-        print(f"Deleted all subdomains for domain ID {domain_id}")
-        
-        # Delete the domain itself
-        cursor.execute("DELETE FROM DOMAINS WHERE ID = ?", (domain_id,))
-        print(f"Deleted domain with ID {domain_id}")
-        
-        # Commit transaction
-        conn.commit()
-        print(f"Successfully deleted domain ID {domain_id} and all related data")
-        return True
-    except Error as e:
-        print(f"Error deleting domain: {e}")
-        conn.rollback()
-        import traceback
-        traceback.print_exc()
-        return False
-    finally:
-        if conn:
-            conn.close()
-
 # Subdomain operations
 def add_subdomain(domain_id, subdomain, status_code=None, technology=None):
     """Add a subdomain to the database if it doesn't exist"""
@@ -699,8 +643,7 @@ def get_nuclei_results(subdomain_id):
             WHERE SID = ?
             ORDER BY severity DESC, vulnerability
         """, (subdomain_id,))
-        results = [dict(row) for row in cursor.fetchall()]
-        return results
+        return [dict(row) for row in cursor.fetchall()]
     except Error as e:
         print(f"Error getting NUCLEI results: {e}")
         return []
@@ -709,8 +652,8 @@ def get_nuclei_results(subdomain_id):
             conn.close()
 
 def get_subdomain_details(subdomain_id):
-    """Get detailed information about a subdomain, including scan results"""
-    print(f"Getting detailed information for subdomain ID: {subdomain_id}")
+    """Get detailed information about a subdomain including scan results"""
+    print(f"Getting details for subdomain ID: {subdomain_id}")
     conn = get_db_connection()
     if conn is None:
         print(f"Failed to get database connection for subdomain details")
@@ -718,41 +661,42 @@ def get_subdomain_details(subdomain_id):
 
     try:
         cursor = conn.cursor()
-
-        # First, get the subdomain information
+        # Get subdomain info
+        print(f"Executing query to get subdomain info for ID: {subdomain_id}")
         cursor.execute("""
-            SELECT s.ID, s.Subdomain, s.StatusCode, s.Technology, 
-                   s.GauScanned, s.NaabuScanned, s.NucleiScanned,
-                   d.Domain as ParentDomain
+            SELECT s.ID, s.Subdomain, s.GauScanned, s.NaabuScanned, s.NucleiScanned, d.Domain
             FROM SUBDOMAINS s
             JOIN DOMAINS d ON s.DomainID = d.ID
             WHERE s.ID = ?
         """, (subdomain_id,))
-        subdomain = cursor.fetchone()
-        if not subdomain:
-            print(f"Subdomain with ID {subdomain_id} not found")
+        result = cursor.fetchone()
+        if result:
+            subdomain = dict(result)
+            print(f"Found subdomain: {subdomain['Subdomain']} (Domain: {subdomain['Domain']})")
+            print(f"Scan status: GAU={subdomain['GauScanned']}, Naabu={subdomain['NaabuScanned']}, Nuclei={subdomain['NucleiScanned']}")
+        else:
+            print(f"No subdomain found with ID: {subdomain_id}")
             return None
 
-        # Convert to dict for easier manipulation
-        result = dict(subdomain)
-        print(f"Found subdomain: {result['Subdomain']} (Parent: {result['ParentDomain']})")
-
         # Get GAU results if scanned
-        if result['GauScanned']:
-            result['gau_results'] = get_gau_results(subdomain_id)
-            print(f"Added {len(result['gau_results'])} GAU results")
+        if subdomain.get('GauScanned'):
+            print(f"Getting GAU results for subdomain ID: {subdomain_id}")
+            subdomain['gau_results'] = get_gau_results(subdomain_id)
+            print(f"Found {len(subdomain['gau_results'])} GAU results")
 
-        # Get Naabu results if scanned
-        if result['NaabuScanned']:
-            result['naabu_results'] = get_naabu_results(subdomain_id)
-            print(f"Added {len(result['naabu_results'])} Naabu results")
+        # Get NAABU results if scanned
+        if subdomain.get('NaabuScanned'):
+            print(f"Getting Naabu results for subdomain ID: {subdomain_id}")
+            subdomain['naabu_results'] = get_naabu_results(subdomain_id)
+            print(f"Found {len(subdomain['naabu_results'])} Naabu results")
 
-        # Get Nuclei results if scanned
-        if result['NucleiScanned']:
-            result['nuclei_results'] = get_nuclei_results(subdomain_id)
-            print(f"Added {len(result['nuclei_results'])} Nuclei results")
+        # Get NUCLEI results if scanned
+        if subdomain.get('NucleiScanned'):
+            print(f"Getting Nuclei results for subdomain ID: {subdomain_id}")
+            subdomain['nuclei_results'] = get_nuclei_results(subdomain_id)
+            print(f"Found {len(subdomain['nuclei_results'])} Nuclei results")
 
-        return result
+        return subdomain
     except Error as e:
         print(f"Error getting subdomain details: {e}")
         import traceback

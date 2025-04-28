@@ -62,20 +62,41 @@ def subdomain_details(subdomain_id):
 
     return jsonify(details)
 
-@main.route('/delete-domain/<int:domain_id>', methods=['POST'])
+@main.route('/test-delete/<int:domain_id>', methods=['GET'])
+def test_delete_route(domain_id):
+    """Test route for domain deletion."""
+    print(f"Test delete route called for domain ID: {domain_id}")
+    return jsonify({'success': True, 'message': f'Test delete route called for domain ID: {domain_id}'})
+
+@main.route('/delete-domain/<int:domain_id>', methods=['POST', 'GET'])
 def delete_domain_route(domain_id):
     """Delete a domain and all related data."""
     print(f"Request to delete domain with ID: {domain_id}")
+    print(f"Request method: {request.method}")
 
-    # Delete the domain and all related data
-    success = delete_domain(domain_id)
+    try:
+        # Delete the domain and all related data
+        success = delete_domain(domain_id)
 
-    if success:
-        print(f"Successfully deleted domain with ID: {domain_id}")
-        return jsonify({'success': True, 'message': 'Domain and all related data deleted successfully'})
-    else:
-        print(f"Failed to delete domain with ID: {domain_id}")
-        return jsonify({'success': False, 'error': 'Failed to delete domain'}), 500
+        if success:
+            print(f"Successfully deleted domain with ID: {domain_id}")
+            # If it's a GET request, redirect to the history page
+            if request.method == 'GET':
+                return redirect(url_for('main.history'))
+            # If it's a POST request, return JSON
+            return jsonify({'success': True, 'message': 'Domain and all related data deleted successfully'})
+        else:
+            print(f"Failed to delete domain with ID: {domain_id}")
+            if request.method == 'GET':
+                return redirect(url_for('main.history'))
+            return jsonify({'success': False, 'error': 'Failed to delete domain'}), 500
+    except Exception as e:
+        print(f"Exception in delete_domain_route: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        if request.method == 'GET':
+            return redirect(url_for('main.history'))
+        return jsonify({'success': False, 'error': f'Exception: {str(e)}'}), 500
 
 @main.route('/tools')
 def tools_status():

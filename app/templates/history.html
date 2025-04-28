@@ -194,6 +194,8 @@
                 const domainName = this.getAttribute('data-domain-name');
 
                 if (confirm(`Are you sure you want to delete the domain "${domainName}" and all its related data? This action cannot be undone.`)) {
+                    console.log(`Sending delete request for domain ID: ${domainId}, name: ${domainName}`);
+
                     // Send delete request
                     fetch(`/delete-domain/${domainId}`, {
                         method: 'POST',
@@ -201,19 +203,31 @@
                             'Content-Type': 'application/json'
                         }
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        console.log('Delete response status:', response.status);
+                        if (!response.ok) {
+                            console.error('Response not OK:', response.status, response.statusText);
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
+                        console.log('Delete response data:', data);
                         if (data.success) {
                             // Remove the domain from the list
                             const domainItem = document.querySelector(`.domain-item[data-domain-id="${domainId}"]`);
                             if (domainItem) {
                                 domainItem.remove();
+                                console.log(`Removed domain item for ID: ${domainId}`);
+                            } else {
+                                console.warn(`Could not find domain item for ID: ${domainId}`);
                             }
 
                             // Show success message
                             alert(`Domain "${domainName}" and all related data have been deleted successfully.`);
                         } else {
                             // Show error message
+                            console.error('Delete failed:', data.error);
                             alert(`Error deleting domain: ${data.error || 'Unknown error'}`);
                         }
                     })
